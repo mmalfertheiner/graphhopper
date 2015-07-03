@@ -293,7 +293,7 @@ public class OSMReader implements DataReader
                     case OSMElement.WAY:
                         if (wayStart < 0)
                         {
-                            logger.info(nf(counter) + ", now parsing ways");
+                            logger.info(nf(counter) + ", now parsing WAYS");
                             wayStart = counter;
                         }
                         processWay((OSMWay) item);

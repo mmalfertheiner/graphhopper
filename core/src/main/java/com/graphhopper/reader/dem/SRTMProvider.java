@@ -43,9 +43,18 @@ public class SRTMProvider implements ElevationProvider
 {
     public static void main( String[] args ) throws IOException
     {
+
         SRTMProvider provider = new SRTMProvider();
-        // 1046
-        System.out.println(provider.getEle(47.468668, 14.575127));
+        // SET Calc mean true
+        provider.setCalcMean(true);
+        //Klausen
+        System.out.println(provider.getEle(46.6399956, 11.566211));
+
+        //Seis
+        System.out.println(provider.getEle(46.544837, 11.562284));
+
+                // 1046
+        /*System.out.println(provider.getEle(47.468668, 14.575127));
         // 1113
         System.out.println(provider.getEle(47.467753, 14.573911));
 
@@ -55,9 +64,19 @@ public class SRTMProvider implements ElevationProvider
         // 845
         System.out.println(provider.getEle(48.469123, 9.576393));
 
-        // 1113 vs new: 
-        provider.setCalcMean(true);
-        System.out.println(provider.getEle(47.467753, 14.573911));
+        */
+                // SET Calc mean true
+                provider.setCalcMean(false);
+        // 1046
+        //System.out.println(provider.getEle(47.468668, 14.575127));
+        // 1113
+        //System.out.println(provider.getEle(47.467753, 14.573911));
+
+        // 1946
+        //System.out.println(provider.getEle(46.468835, 12.578777));
+
+        // 845
+        //System.out.println(provider.getEle(48.469123, 9.576393));
     }
 
     private static final BitUtil BIT_UTIL = BitUtil.BIG;

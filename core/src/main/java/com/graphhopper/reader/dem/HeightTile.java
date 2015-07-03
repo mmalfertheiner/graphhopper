@@ -105,6 +105,7 @@ public class HeightTile
 
         if (calcMean)
         {
+
             if (lonSimilar > 0)
                 value += includePoint(daPointer - 2, counter);
 
