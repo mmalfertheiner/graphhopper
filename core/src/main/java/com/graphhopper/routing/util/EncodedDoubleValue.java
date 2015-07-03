@@ -55,7 +55,10 @@ public class EncodedDoubleValue extends EncodedValue
 
     public long setDoubleValue( long flags, double value )
     {
-        // scale value        
+        if (Double.isNaN(value))
+            throw new IllegalStateException("Value cannot be NaN");
+
+        // scale value
         long tmpValue = Math.round(value / factor);
         checkValue(Math.round(tmpValue * factor));
         tmpValue <<= shift;
@@ -71,13 +74,13 @@ public class EncodedDoubleValue extends EncodedValue
     {
         // find value
         flags &= mask;
-        flags >>= shift;
+        flags >>>= shift;
         return flags * factor;
     }
 
     /**
      * Swap the contents controlled by this value encoder with the given value.
-     * <p>
+     * <p/>
      * @return the new flags
      */
     public long swap( long flags, EncodedDoubleValue otherEncoder )

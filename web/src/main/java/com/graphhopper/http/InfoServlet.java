@@ -22,6 +22,7 @@ import com.graphhopper.storage.StorableProperties;
 import com.graphhopper.util.Constants;
 import com.graphhopper.util.Helper;
 import com.graphhopper.util.shapes.BBox;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -29,8 +30,10 @@ import javax.inject.Inject;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+
 import static javax.servlet.http.HttpServletResponse.SC_BAD_REQUEST;
 import static javax.servlet.http.HttpServletResponse.SC_INTERNAL_SERVER_ERROR;
+
 import org.json.JSONObject;
 
 /**
@@ -43,21 +46,6 @@ public class InfoServlet extends GHBaseServlet
 
     @Override
     public void doGet( HttpServletRequest req, HttpServletResponse res ) throws ServletException, IOException
-    {
-        try
-        {
-            writeInfos(req, res);
-        } catch (IllegalArgumentException ex)
-        {
-            writeError(res, SC_BAD_REQUEST, ex.getMessage());
-        } catch (Exception ex)
-        {
-            logger.error("Error while executing request: " + req.getQueryString(), ex);
-            writeError(res, SC_INTERNAL_SERVER_ERROR, "Problem occured:" + ex.getMessage());
-        }
-    }
-
-    void writeInfos( HttpServletRequest req, HttpServletResponse res ) throws Exception
     {
         BBox bb = hopper.getGraph().getBounds();
         List<Double> list = new ArrayList<Double>(4);

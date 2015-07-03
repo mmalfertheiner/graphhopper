@@ -18,6 +18,7 @@
 package com.graphhopper.coll;
 
 import com.graphhopper.util.BitUtil;
+
 import java.util.TreeMap;
 
 /**
@@ -67,7 +68,7 @@ public class GHTreeMapComposed
     public int peekValue()
     {
         long key = map.firstEntry().getKey();
-        return (int) (key >>> 32);
+        return (int) (key >> 32);
     }
 
     public int peekKey()

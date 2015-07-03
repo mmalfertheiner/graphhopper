@@ -36,7 +36,7 @@ import com.graphhopper.util.GHUtility;
  * Calculates best path in bidirectional way.
  * <p/>
  * 'Ref' stands for reference implementation and is using the normal Java-'reference'-way.
- * <p>
+ * <p/>
  * @author Peter Karich
  */
 public class DijkstraBidirectionRef extends AbstractBidirAlgo
@@ -67,9 +67,9 @@ public class DijkstraBidirectionRef extends AbstractBidirAlgo
     }
 
     @Override
-    public void initFrom( int from, double dist )
+    public void initFrom( int from, double weight )
     {
-        currFrom = createEdgeEntry(from, dist);
+        currFrom = createEdgeEntry(from, weight);
         openSetFrom.add(currFrom);
         if (!traversalMode.isEdgeBased())
         {
@@ -93,9 +93,9 @@ public class DijkstraBidirectionRef extends AbstractBidirAlgo
     }
 
     @Override
-    public void initTo( int to, double dist )
+    public void initTo( int to, double weight )
     {
-        currTo = createEdgeEntry(to, dist);
+        currTo = createEdgeEntry(to, weight);
         openSetTo.add(currTo);
         if (!traversalMode.isEdgeBased())
         {
@@ -135,10 +135,15 @@ public class DijkstraBidirectionRef extends AbstractBidirAlgo
     }
 
     @Override
-    void checkState( int fromBase, int fromAdj, int toBase, int toAdj )
+    protected double getCurrentFromWeight()
     {
-        if (bestWeightMapFrom.isEmpty() || bestWeightMapTo.isEmpty())
-            throw new IllegalStateException("Either 'from'-edge or 'to'-edge is inaccessible. From:" + bestWeightMapFrom + ", to:" + bestWeightMapTo);
+        return currFrom.weight;
+    }
+
+    @Override
+    protected double getCurrentToWeight()
+    {
+        return currTo.weight;
     }
 
     @Override
@@ -186,7 +191,7 @@ public class DijkstraBidirectionRef extends AbstractBidirAlgo
     }
 
     void fillEdges( EdgeEntry currEdge, PriorityQueue<EdgeEntry> prioQueue,
-            TIntObjectMap<EdgeEntry> shortestWeightMap, EdgeExplorer explorer, boolean reverse )
+                    TIntObjectMap<EdgeEntry> shortestWeightMap, EdgeExplorer explorer, boolean reverse )
     {
         int currNode = currEdge.adjNode;
         EdgeIterator iter = explorer.setBaseNode(currNode);

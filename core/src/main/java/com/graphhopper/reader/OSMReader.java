@@ -18,6 +18,7 @@
 package com.graphhopper.reader;
 
 import static com.graphhopper.util.Helper.nf;
+
 import gnu.trove.list.TLongList;
 import gnu.trove.list.array.TLongArrayList;
 import gnu.trove.map.TIntLongMap;
@@ -48,6 +49,7 @@ import com.graphhopper.util.*;
 import com.graphhopper.util.shapes.GHPoint;
 import gnu.trove.map.TLongObjectMap;
 import gnu.trove.map.hash.TLongObjectHashMap;
+
 import java.util.*;
 
 /**
@@ -57,7 +59,7 @@ import java.util.*;
  * 1. a) Reads ways from OSM file and stores all associated node ids in osmNodeIdToIndexMap. If a
  * node occurs once it is a pillar node and if more it is a tower node, otherwise
  * osmNodeIdToIndexMap returns EMPTY.
- * <p>
+ * <p/>
  * 1. b) Reads relations from OSM file. In case that the relation is a route relation, it stores
  * specific relation attributes required for routing into osmWayIdToRouteWeigthMap for all the ways
  * of the relation.
@@ -658,7 +660,7 @@ public class OSMReader implements DataReader
     /**
      * This method creates from an OSM way (via the osm ids) one or more edges in the graph.
      */
-    Collection<EdgeIteratorState> addOSMWay( TLongList osmNodeIds, long flags, long wayOsmId )
+    Collection<EdgeIteratorState> addOSMWay( final TLongList osmNodeIds, final long flags, final long wayOsmId )
     {
         PointList pointList = new PointList(osmNodeIds.size(), nodeAccess.is3D());
         List<EdgeIteratorState> newEdges = new ArrayList<EdgeIteratorState>(5);
@@ -777,12 +779,18 @@ public class OSMReader implements DataReader
                     pillarNodes.add(lat, lon);
             }
         }
-        if (towerNodeDistance == 0)
+        if (towerNodeDistance < 0.0001)
         {
             // As investigation shows often two paths should have crossed via one identical point 
-            // but end up in two very release points.
+            // but end up in two very close points.
             zeroCounter++;
             towerNodeDistance = 0.0001;
+        }
+
+        if (Double.isInfinite(towerNodeDistance) || Double.isNaN(towerNodeDistance))
+        {
+            logger.warn("Bug in OSM or GraphHopper. Illegal tower node distance " + towerNodeDistance + " reset to 1m, osm way " + wayOsmId);
+            towerNodeDistance = 1;
         }
 
         EdgeIteratorState iter = graphStorage.edge(fromIndex, toIndex).setDistance(towerNodeDistance).setFlags(flags);
@@ -893,7 +901,7 @@ public class OSMReader implements DataReader
 
     /**
      * Creates an OSM turn relation out of an unspecified OSM relation
-     * <p>
+     * <p/>
      * @return the OSM turn relation, <code>null</code>, if unsupported turn relation
      */
     OSMTurnRelation createTurnRelation( OSMRelation relation )
@@ -997,10 +1005,11 @@ public class OSMReader implements DataReader
 
     private void printInfo( String str )
     {
-        LoggerFactory.getLogger(getClass()).info(
-                "finished " + str + " processing." + " nodes: " + graphStorage.getNodes() + ", osmIdMap.size:" + getNodeMap().getSize()
-                + ", osmIdMap:" + getNodeMap().getMemoryUsage() + "MB" + ", nodeFlagsMap.size:" + getNodeFlagsMap().size()
-                + ", relFlagsMap.size:" + getRelFlagsMap().size() + " " + Helper.getMemInfo());
+        logger.info("finished " + str + " processing." + " nodes: " + graphStorage.getNodes()
+                + ", osmIdMap.size:" + getNodeMap().getSize() + ", osmIdMap:" + getNodeMap().getMemoryUsage() + "MB"
+                + ", nodeFlagsMap.size:" + getNodeFlagsMap().size() + ", relFlagsMap.size:" + getRelFlagsMap().size()
+                + ", zeroCounter:" + zeroCounter
+                + " " + Helper.getMemInfo());
     }
 
     @Override

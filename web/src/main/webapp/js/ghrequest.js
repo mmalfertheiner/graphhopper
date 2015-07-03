@@ -312,16 +312,16 @@ GHRequest.prototype.init = function (params) {
             val = false;
         else if (val === "true")
             val = true;
-        else {
-            if (parseFloat(val) != NaN)
-                val = parseFloat(val)
-        }
 
         // todo
         // this[key] = val;
 
         if (key.indexOf('api.') === 0) {
-            this.api_params[key.substring(4)] = val;
+            key = key.substring(4);
+            if (GHroute.isArray(val))
+                this.api_params[key] = val;
+            else
+                this.api_params[key] = [val];
         }
     }
 
@@ -459,7 +459,12 @@ GHRequest.prototype.createPath = function (url) {
         url += "&debug=true";
 
     for (var key in this.api_params) {
-        url += "&" + key + "=" + this.api_params[key];
+        // entries in api_params are all arrays
+        var arr = this.api_params[key];
+        if (GHroute.isArray(arr))
+            for (var keyIndex in arr) {
+                url += "&" + key + "=" + arr[keyIndex];
+            }
     }
     return url;
 };
@@ -541,22 +546,20 @@ GHRequest.prototype.doRequest = function (url, callback) {
             // problematic: this callback is not invoked when using JSONP!
             // http://stackoverflow.com/questions/19035557/jsonp-request-error-handling
             var msg = "API did not respond! ";
-            if (err && err.responseText && err.responseText.indexOf('{') >= 0) {
-                var jsonError = JSON.parse(err.responseText);
-                msg += jsonError.message;
-            } else if (err && err.statusText && err.statusText !== "OK")
-                msg += err.statusText;
+            var json;
 
+            if (err && err.responseText && err.responseText.indexOf('{') >= 0) {
+                json = JSON.parse(err.responseText);
+            } else if (err && err.statusText && err.statusText !== "OK") {
+                msg += err.statusText;
+                var details = "Error for " + url;
+                json = {
+                    message: msg,
+                    hints: [{"message": msg, "details": details}]
+                };
+            }
             log(msg + " " + JSON.stringify(err));
-            var details = "Error for " + url;
-            var json = {
-                "info": {
-                    "errors": [{
-                            "message": msg,
-                            "details": details
-                        }]
-                }
-            };
+
             callback(json);
         },
         type: "GET",

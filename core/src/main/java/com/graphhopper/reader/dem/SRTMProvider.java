@@ -23,20 +23,22 @@ import com.graphhopper.util.BitUtil;
 import com.graphhopper.util.Downloader;
 import com.graphhopper.util.Helper;
 import gnu.trove.map.hash.TIntObjectHashMap;
+
 import java.io.*;
 import java.net.SocketTimeoutException;
 import java.util.zip.ZipInputStream;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Elevation data from NASA (SRTM). Downloaded from http://dds.cr.usgs.gov/srtm/version2_1/SRTM3/
- * <p>
+ * Elevation data from NASA (SRTM).
+ * <p/>
  * Important information about SRTM: the coordinates of the lower-left corner of tile N40W118 are 40
  * degrees north latitude and 118 degrees west longitude. To be more exact, these coordinates refer
  * to the geometric center of the lower left sample, which in the case of SRTM3 data will be about
  * 90 meters in extent.
- * <p>
+ * <p/>
  * @author Peter Karich
  */
 public class SRTMProvider implements ElevationProvider
@@ -91,7 +93,8 @@ public class SRTMProvider implements ElevationProvider
     private final TIntObjectHashMap<String> areas = new TIntObjectHashMap<String>();
     private final double precision = 1e7;
     private final double invPrecision = 1 / precision;
-    // mirror: base = "http://mirror.ufs.ac.za/datasets/SRTM3/"
+    // possible alternatives see #451
+    // http://mirror.ufs.ac.za/datasets/SRTM3/
     private String baseUrl = "http://dds.cr.usgs.gov/srtm/version2_1/SRTM3/";
     private boolean calcMean = false;
 
@@ -116,9 +119,9 @@ public class SRTMProvider implements ElevationProvider
         try
         {
             String strs[] =
-            {
-                "Africa", "Australia", "Eurasia", "Islands", "North_America", "South_America"
-            };
+                    {
+                            "Africa", "Australia", "Eurasia", "Islands", "North_America", "South_America"
+                    };
             for (String str : strs)
             {
                 InputStream is = getClass().getResourceAsStream(str + "_names.txt");
@@ -268,7 +271,7 @@ public class SRTMProvider implements ElevationProvider
                 heights.create(bytes.length);
                 try
                 {
-                    String zippedURL = baseUrl + "/" + fileDetails + "hgt.zip";
+                    String zippedURL = baseUrl + "/" + fileDetails + ".hgt.zip";
                     File file = new File(cacheDir, new File(zippedURL).getName());
                     InputStream is;
                     // get zip file if not already in cacheDir - unzip later and in-memory only!
@@ -287,8 +290,8 @@ public class SRTMProvider implements ElevationProvider
                                 continue;
                             } catch (FileNotFoundException ex)
                             {
-                                // now try different URL (with point!), necessary if mirror is used
-                                zippedURL = baseUrl + "/" + fileDetails + ".hgt.zip";
+                                // now try different URL (without point!), necessary if mirror is used
+                                zippedURL = baseUrl + "/" + fileDetails + "hgt.zip";
                                 continue;
                             }
                         }

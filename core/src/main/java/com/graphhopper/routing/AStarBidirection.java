@@ -24,6 +24,7 @@ import gnu.trove.map.hash.TIntObjectHashMap;
 import java.util.PriorityQueue;
 
 import com.graphhopper.routing.AStar.AStarEdge;
+import com.graphhopper.storage.EdgeEntry;
 import com.graphhopper.storage.Graph;
 import com.graphhopper.util.*;
 
@@ -93,17 +94,24 @@ public class AStarBidirection extends AbstractBidirAlgo
     }
 
     @Override
-    protected AStarEdge createEdgeEntry( int node, double dist )
+    protected EdgeEntry createEdgeEntry( int node, double weight )
     {
-        return new AStarEdge(EdgeIterator.NO_EDGE, node, dist, dist);
+        throw new IllegalStateException("use AStarEdge constructor directly");
     }
 
     @Override
-    public void initFrom( int from, double dist )
+    public void initFrom( int from, double weight )
     {
-        currFrom = createEdgeEntry(from, dist);
+        currFrom = new AStarEdge(EdgeIterator.NO_EDGE, from, weight, weight);
         weightApprox.setSourceNode(from);
         prioQueueOpenSetFrom.add(currFrom);
+
+        if (currTo != null)
+        {
+            currFrom.weight += weightApprox.approximate(currFrom.adjNode, false);
+            currTo.weight += weightApprox.approximate(currTo.adjNode, true);
+        }
+
         if (!traversalMode.isEdgeBased())
         {
             bestWeightMapFrom.put(from, currFrom);
@@ -126,11 +134,18 @@ public class AStarBidirection extends AbstractBidirAlgo
     }
 
     @Override
-    public void initTo( int to, double dist )
+    public void initTo( int to, double weight )
     {
-        currTo = createEdgeEntry(to, dist);
+        currTo = new AStarEdge(EdgeIterator.NO_EDGE, to, weight, weight);
         weightApprox.setGoalNode(to);
         prioQueueOpenSetTo.add(currTo);
+
+        if (currFrom != null)
+        {
+            currFrom.weight += weightApprox.approximate(currFrom.adjNode, false);
+            currTo.weight += weightApprox.approximate(currTo.adjNode, true);
+        }
+
         if (!traversalMode.isEdgeBased())
         {
             bestWeightMapTo.put(to, currTo);
@@ -169,10 +184,15 @@ public class AStarBidirection extends AbstractBidirAlgo
     }
 
     @Override
-    void checkState( int fromBase, int fromAdj, int toBase, int toAdj )
+    protected double getCurrentFromWeight()
     {
-        if (bestWeightMapFrom.isEmpty() || bestWeightMapTo.isEmpty())
-            throw new IllegalStateException("Either 'from'-edge or 'to'-edge is inaccessible. From:" + bestWeightMapFrom + ", to:" + bestWeightMapTo);
+        return currFrom.weight;
+    }
+
+    @Override
+    protected double getCurrentToWeight()
+    {
+        return currTo.weight;
     }
 
     @Override
@@ -217,7 +237,7 @@ public class AStarBidirection extends AbstractBidirAlgo
     }
 
     private void fillEdges( AStarEdge currEdge, PriorityQueue<AStarEdge> prioQueueOpenSet,
-            TIntObjectMap<AStarEdge> shortestWeightMap, EdgeExplorer explorer, boolean reverse )
+                            TIntObjectMap<AStarEdge> shortestWeightMap, EdgeExplorer explorer, boolean reverse )
     {
 
         int currNode = currEdge.adjNode;
@@ -261,7 +281,6 @@ public class AStarBidirection extends AbstractBidirAlgo
         }
     }
 
-//    @Override -> TODO use only weight => then a simple EdgeEntry is possible
     public void updateBestPath( EdgeIteratorState edgeState, AStarEdge entryCurrent, int currLoc )
     {
         AStarEdge entryOther = bestWeightMapOther.get(currLoc);

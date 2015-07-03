@@ -23,7 +23,9 @@ import com.graphhopper.storage.*;
 import com.graphhopper.util.EdgeIteratorState;
 import com.graphhopper.util.EdgeSkipIterState;
 import com.graphhopper.util.Helper;
+
 import static org.junit.Assert.*;
+
 import org.junit.Test;
 
 /**
@@ -114,7 +116,7 @@ public class DijkstraBidirectionCHTest extends AbstractRoutingAlgorithmTester
 
         ShortestWeighting weighting = new ShortestWeighting();
         AlgorithmOptions opts = new AlgorithmOptions(AlgorithmOptions.DIJKSTRA_BI, encoder, weighting);
-        Path p = new PrepareContractionHierarchies(new GHDirectory("", DAType.RAM_INT), 
+        Path p = new PrepareContractionHierarchies(new GHDirectory("", DAType.RAM_INT),
                 g2, encoder, weighting, TraversalMode.NODE_BASED).
                 createAlgo(g2, opts).calcPath(0, 7);
 
@@ -159,7 +161,7 @@ public class DijkstraBidirectionCHTest extends AbstractRoutingAlgorithmTester
         // use base graph for solving normal Dijkstra
         Path p1 = new RoutingAlgorithmFactorySimple().createAlgo(g, defaultOpts).calcPath(0, 3);
         assertEquals(Helper.createTList(0, 1, 5, 2, 3), p1.calcNodes());
-        assertEquals(p1.toString(), 402.293, p1.getDistance(), 1e-6);
+        assertEquals(p1.toString(), 402.29, p1.getDistance(), 1e-2);
         assertEquals(p1.toString(), 144823, p1.getTime());
     }
 

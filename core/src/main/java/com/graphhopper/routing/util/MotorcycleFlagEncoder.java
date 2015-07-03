@@ -22,11 +22,12 @@ import com.graphhopper.util.BitUtil;
 import com.graphhopper.util.PMap;
 
 import static com.graphhopper.routing.util.PriorityCode.*;
+
 import java.util.HashSet;
 
 /**
  * Defines bit layout for motorbikes
- * <p>
+ * <p/>
  * @author Peter Karich
  */
 public class MotorcycleFlagEncoder extends CarFlagEncoder
@@ -36,9 +37,10 @@ public class MotorcycleFlagEncoder extends CarFlagEncoder
     private final HashSet<String> avoidSet = new HashSet<String>();
     private final HashSet<String> preferSet = new HashSet<String>();
 
-    public MotorcycleFlagEncoder(PMap properties) {
+    public MotorcycleFlagEncoder( PMap properties )
+    {
         this(
-                (int)properties.getLong("speedBits", 5),
+                (int) properties.getLong("speedBits", 5),
                 properties.getDouble("speedFactor", 5),
                 properties.getBool("turnCosts", false) ? 3 : 0
         );
@@ -46,7 +48,7 @@ public class MotorcycleFlagEncoder extends CarFlagEncoder
         this.setBlockFords(properties.getBool("blockFords", true));
     }
 
-    public MotorcycleFlagEncoder(String propertiesStr )
+    public MotorcycleFlagEncoder( String propertiesStr )
     {
         this(new PMap(propertiesStr));
     }
@@ -72,8 +74,8 @@ public class MotorcycleFlagEncoder extends CarFlagEncoder
         avoidSet.add("motorroad");
         preferSet.add("primary");
         preferSet.add("secondary");
-        
-        maxPossibleSpeed = 100;
+
+        maxPossibleSpeed = 120;
 
         // autobahn
         defaultSpeedMap.put("motorway", 100);
@@ -103,7 +105,7 @@ public class MotorcycleFlagEncoder extends CarFlagEncoder
     }
 
     @Override
-    public short getVersion()
+    public int getVersion()
     {
         return 1;
     }
@@ -116,8 +118,8 @@ public class MotorcycleFlagEncoder extends CarFlagEncoder
     {
         // first two bits are reserved for route handling in superclass
         shift = super.defineWayBits(index, shift);
-        reverseSpeedEncoder = new EncodedDoubleValue("Reverse Speed", shift, speedBits, speedFactor, 
-                                                     defaultSpeedMap.get("secondary"), maxPossibleSpeed);
+        reverseSpeedEncoder = new EncodedDoubleValue("Reverse Speed", shift, speedBits, speedFactor,
+                defaultSpeedMap.get("secondary"), maxPossibleSpeed);
         shift += reverseSpeedEncoder.getBits();
 
         preferWayEncoder = new EncodedValue("PreferWay", shift, 3, 1, 3, 7);
@@ -157,13 +159,17 @@ public class MotorcycleFlagEncoder extends CarFlagEncoder
         if (way.hasTag("impassable", "yes") || way.hasTag("status", "impassable"))
             return 0;
 
-        // do not drive street cars into fords
-        boolean carsAllowed = way.hasTag(restrictions, intendedValues);
-        if (isBlockFords() && ("ford".equals(highwayValue) || way.hasTag("ford")) && !carsAllowed)
-            return 0;
+        String firstValue = way.getFirstPriorityTag(restrictions);
+        if (!firstValue.isEmpty())
+        {
+            if (restrictedValues.contains(firstValue))
+                return 0;
+            if (intendedValues.contains(firstValue))
+                return acceptBit;
+        }
 
-        // check access restrictions
-        if (way.hasTag(restrictions, restrictedValues) && !carsAllowed)
+        // do not drive street cars into fords
+        if (isBlockFords() && ("ford".equals(highwayValue) || way.hasTag("ford")))
             return 0;
 
         // do not drive cars over railways (sometimes incorrectly mapped!)
@@ -239,10 +245,22 @@ public class MotorcycleFlagEncoder extends CarFlagEncoder
         if (speed < 0)
             throw new IllegalArgumentException("Speed cannot be negative: " + speed + ", flags:" + BitUtil.LITTLE.toBitString(flags));
 
+        if (speed < speedEncoder.factor / 2)
+            return setLowSpeed(flags, speed, true);
+
         if (speed > getMaxSpeed())
             speed = getMaxSpeed();
 
         return reverseSpeedEncoder.setDoubleValue(flags, speed);
+    }
+
+    @Override
+    protected long setLowSpeed( long flags, double speed, boolean reverse )
+    {
+        if (reverse)
+            return setBool(reverseSpeedEncoder.setDoubleValue(flags, 0), K_BACKWARD, false);
+
+        return setBool(speedEncoder.setDoubleValue(flags, 0), K_FORWARD, false);
     }
 
     @Override

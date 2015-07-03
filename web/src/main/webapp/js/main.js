@@ -318,12 +318,12 @@ function initMap(selectLayer) {
         attribution: osmAttr + ', <a href="https://geodienste.lyrk.de/">Lyrk</a>',
         subdomains: ['a', 'b', 'c']
     });
-        
+
     var omniscale = L.tileLayer.wms('https://maps.omniscale.net/v1/mapsgraph-bf48cc0b/tile', {
-            layers: 'osm',
+        layers: 'osm',
         attribution: osmAttr + ', &copy; <a href="http://maps.omniscale.com/">Omniscale</a>'
     });
-            
+
     var mapquest = L.tileLayer('http://{s}.mqcdn.com/tiles/1.0.0/osm/{z}/{x}/{y}.png', {
         attribution: osmAttr + ', <a href="http://open.mapquest.co.uk" target="_blank">MapQuest</a>',
         subdomains: ['otile1', 'otile2', 'otile3', 'otile4']
@@ -385,7 +385,7 @@ function initMap(selectLayer) {
 
     var baseMaps = {
         "Lyrk": lyrk,
-        "Omniscale" : omniscale,
+        "Omniscale": omniscale,
         "MapQuest": mapquest,
         "MapQuest Aerial": mapquestAerial,
         "Esri Aerial": esriAerial,
@@ -977,11 +977,15 @@ function routeLatLng(request, doQuery) {
     descriptionDiv.html('<img src="img/indicator.gif"/> Search Route ...');
     request.doRequest(urlForAPI, function (json) {
         descriptionDiv.html("");
-        if (json.info.errors) {
-            var tmpErrors = json.info.errors;
+        if (json.message) {
+            var tmpErrors = json.message;
             log(tmpErrors);
-            for (var m = 0; m < tmpErrors.length; m++) {
-                descriptionDiv.append("<div class='error'>" + tmpErrors[m].message + "</div>");
+            if (json.hints) {
+                for (var m = 0; m < json.hints.length; m++) {
+                    descriptionDiv.append("<div class='error'>" + json.hints[m].message + "</div>");
+                }
+            } else {
+                descriptionDiv.append("<div class='error'>" + tmpErrors + "</div>");
             }
             return;
         }
@@ -1076,8 +1080,7 @@ function routeLatLng(request, doQuery) {
                 hiddenDiv.toggle();
             });
             $("#info").append(toggly);
-            var infoStr = "took: " + round(json.info.took / 1000, 1000) + "s"
-                    + ", points: " + path.points.coordinates.length;
+            var infoStr = "points: " + path.points.coordinates.length;
 
             hiddenDiv.append("<span>" + infoStr + "</span>");
 
@@ -1248,25 +1251,24 @@ function parseUrl(query) {
         if (value === "")
             continue;
 
-        if (key === "point" && !res[key]) {
-            res[key] = [value];
-        } else if (typeof res[key] === "string") {
-            var arr = [res[key], value];
-            res[key] = arr;
-        } else if (typeof res[key] === "undefined") {
-            if (value === 'true') {
-                res[key] = true;
-            } else if (value === 'false') {
-                res[key] = false;
-            } else {
-                var tmp = Number(value);
-                if (isNaN(tmp))
-                    res[key] = value;
-                else
-                    res[key] = Number(value);
-            }
+        // force array for heading and point
+        if (typeof res[key] === "undefined"
+                && key !== "heading" && key !== "point") {
+            if (value === 'true')
+                value = true;
+            else if (value === 'false')
+                value = false;
+
+            res[key] = value;
         } else {
-            res[key].push(value);
+            var tmpVal = res[key];
+            if (GHroute.isArray(tmpVal)) {
+                tmpVal.push(value);
+            } else if (tmpVal) {
+                res[key] = [tmpVal, value];
+            } else {
+                res[key] = [value];
+            }
         }
     }
     return res;

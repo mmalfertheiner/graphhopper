@@ -20,6 +20,7 @@ package com.graphhopper;
 import com.graphhopper.util.InstructionList;
 import com.graphhopper.util.PointList;
 import com.graphhopper.util.shapes.BBox;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -110,7 +111,7 @@ public class GHResponse
     /**
      * This method returns the distance of the path. Always prefer this method over
      * getPoints().calcDistance
-     * <p>
+     * <p/>
      * @return distance in meter
      */
     public double getDistance()
@@ -191,8 +192,8 @@ public class GHResponse
     @Override
     public String toString()
     {
-        String str = "nodes:" + list.getSize() + ": " + list.toString();
-        if (!instructions.isEmpty())
+        String str = "nodes:" + list.getSize() + "; " + list.toString();
+        if (instructions != null && !instructions.isEmpty())
             str += ", " + instructions.toString();
 
         if (hasErrors())

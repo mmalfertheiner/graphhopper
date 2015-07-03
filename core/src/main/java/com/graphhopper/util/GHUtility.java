@@ -27,6 +27,7 @@ import com.graphhopper.routing.util.FlagEncoder;
 import com.graphhopper.storage.*;
 import gnu.trove.list.TIntList;
 import gnu.trove.list.array.TIntArrayList;
+
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -109,7 +110,8 @@ public class GHUtility
 
     public static Set<Integer> getNeighbors( EdgeIterator iter )
     {
-        Set<Integer> list = new HashSet<Integer>();
+        // make iteration order over set static => linked
+        Set<Integer> list = new LinkedHashSet<Integer>();
         while (iter.next())
         {
             list.add(iter.getAdjNode());
@@ -455,6 +457,12 @@ public class GHUtility
         }
 
         @Override
+        public boolean getBoolean(int key, boolean reverse, boolean _default )
+        {
+            throw new UnsupportedOperationException("Not supported. Edge is empty.");
+        }
+        
+        @Override
         public int getAdditionalField()
         {
             throw new UnsupportedOperationException("Not supported. Edge is empty.");
@@ -519,5 +527,13 @@ public class GHUtility
     public static boolean isSameEdgeKeys( int edgeKey1, int edgeKey2 )
     {
         return edgeKey1 / 2 == edgeKey2 / 2;
+    }
+
+    /**
+     * Returns the edgeKey of the opposite direction
+     */
+    public static int reverseEdgeKey( int edgeKey )
+    {
+        return edgeKey % 2 == 0 ? edgeKey + 1 : edgeKey - 1;
     }
 }

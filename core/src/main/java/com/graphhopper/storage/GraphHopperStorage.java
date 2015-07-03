@@ -24,16 +24,11 @@ import com.graphhopper.routing.util.AllEdgesIterator;
 import com.graphhopper.routing.util.EdgeFilter;
 import com.graphhopper.routing.util.EncodingManager;
 import com.graphhopper.search.NameIndex;
-import com.graphhopper.util.BitUtil;
-import com.graphhopper.util.EdgeExplorer;
-import com.graphhopper.util.EdgeIterator;
-import com.graphhopper.util.EdgeIteratorState;
-import com.graphhopper.util.GHUtility;
-import com.graphhopper.util.Helper;
-import com.graphhopper.util.PointList;
+import com.graphhopper.util.*;
 import com.graphhopper.util.shapes.BBox;
 
 import static com.graphhopper.util.Helper.nf;
+
 import java.io.UnsupportedEncodingException;
 
 /**
@@ -47,9 +42,9 @@ import java.io.UnsupportedEncodingException;
  * Life cycle: (1) object creation, (2) configuration via setters & getters, (3) create or
  * loadExisting, (4) usage, (5) flush, (6) close
  * <p/>
+ * @author Peter Karich
  * @see GraphBuilder Use the GraphBuilder class to create a (Level)GraphStorage easier.
  * @see LevelGraphStorage
- * @author Peter Karich
  */
 public class GraphHopperStorage implements GraphStorage
 {
@@ -105,7 +100,7 @@ public class GraphHopperStorage implements GraphStorage
     }
 
     public GraphHopperStorage( Directory dir, EncodingManager encodingManager, boolean withElevation,
-            GraphExtension extendedStorage )
+                               GraphExtension extendedStorage )
     {
         if (encodingManager == null)
             throw new IllegalArgumentException("EncodingManager cannot be null in GraphHopperStorage since 0.4. "
@@ -320,7 +315,7 @@ public class GraphHopperStorage implements GraphStorage
 
     /**
      * Create edge between nodes a and b
-     * <p>
+     * <p/>
      * @return EdgeIteratorState of newly created edge
      */
     @Override
@@ -369,7 +364,7 @@ public class GraphHopperStorage implements GraphStorage
 
     /**
      * Determine next free edgeId and ensure byte capacity to store edge
-     * <p>
+     * <p/>
      * @return next free edgeId
      */
     private int nextEdge()
@@ -410,6 +405,10 @@ public class GraphHopperStorage implements GraphStorage
             nextEdge = nextEdgeOther;
             nextEdgeOther = tmp;
         }
+
+        if (edge < 0 || edge == EdgeIterator.NO_EDGE)
+            throw new IllegalStateException("Cannot write edge with illegal ID:" + edge
+                    + "; nodeThis:" + nodeThis + ", nodeOther:" + nodeOther);
 
         long edgePointer = (long) edge * edgeEntryBytes;
         edges.setInt(edgePointer + E_NODEA, nodeThis);
@@ -621,12 +620,15 @@ public class GraphHopperStorage implements GraphStorage
         @Override
         public EdgeIteratorState setName( String name )
         {
-            long nameIndexRef = nameIndex.put(name);
-            if (nameIndexRef < 0)
-                throw new IllegalStateException("Too many names are stored, currently limited to int pointer");
-
-            edges.setInt(edgePointer + E_NAME, (int) nameIndexRef);
+            GraphHopperStorage.this.setName(edgePointer, name);
             return this;
+        }
+
+        @Override
+        public boolean getBoolean( int key, boolean reverse, boolean _default )
+        {
+            // for non-existent keys return default
+            return _default;
         }
 
         @Override
@@ -893,13 +895,16 @@ public class GraphHopperStorage implements GraphStorage
         }
 
         @Override
+        public boolean getBoolean( int key, boolean reverse, boolean _default )
+        {
+            // for non-existent keys return default
+            return _default;
+        }
+
+        @Override
         public EdgeIteratorState setName( String name )
         {
-            long nameIndexRef = nameIndex.put(name);
-            if (nameIndexRef < 0)
-                throw new IllegalStateException("Too many names are stored, currently limited to int pointer");
-
-            edges.setInt(edgePointer + E_NAME, (int) nameIndexRef);
+            GraphHopperStorage.this.setName(edgePointer, name);
             return this;
         }
 
@@ -1059,6 +1064,15 @@ public class GraphHopperStorage implements GraphStorage
         return pillarNodes;
     }
 
+    private void setName( long edgePointer, String name )
+    {
+        long nameIndexRef = nameIndex.put(name);
+        if (nameIndexRef < 0)
+            throw new IllegalStateException("Too many names are stored, currently limited to int pointer");
+
+        edges.setInt(edgePointer + E_NAME, (int) nameIndexRef);
+    }
+
     @Override
     public Graph copyTo( Graph g )
     {
@@ -1200,7 +1214,7 @@ public class GraphHopperStorage implements GraphStorage
     private void inPlaceNodeRemove( int removeNodeCount )
     {
         // Prepare edge-update of nodes which are connected to deleted nodes        
-        int toMoveNode = getNodes();
+        int toMoveNodes = getNodes();
         int itemsToMove = 0;
 
         // sorted map when we access it via keyAt and valueAt - see below!
@@ -1220,15 +1234,15 @@ public class GraphHopperStorage implements GraphStorage
                 toRemoveSet.add(delEdgesIter.getAdjNode());
             }
 
-            toMoveNode--;
-            for (; toMoveNode >= 0; toMoveNode--)
+            toMoveNodes--;
+            for (; toMoveNodes >= 0; toMoveNodes--)
             {
-                if (!removedNodes.contains(toMoveNode))
+                if (!removedNodes.contains(toMoveNodes))
                     break;
             }
 
-            if (toMoveNode >= removeNode)
-                oldToNewMap.put(toMoveNode, removeNode);
+            if (toMoveNodes >= removeNode)
+                oldToNewMap.put(toMoveNodes, removeNode);
 
             itemsToMove++;
         }
@@ -1325,6 +1339,9 @@ public class GraphHopperStorage implements GraphStorage
             if (updatedA < updatedB != nodeA < nodeB)
                 setWayGeometry(fetchWayGeometry(edgePointer, true, 0, -1, -1), edgePointer, false);
         }
+
+        if (removeNodeCount >= nodeCount)
+            throw new IllegalStateException("graph is empty after in-place removal but was " + removeNodeCount);
 
         // we do not remove the invalid edges => edgeCount stays the same!
         nodeCount -= removeNodeCount;

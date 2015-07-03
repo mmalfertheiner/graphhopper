@@ -95,7 +95,7 @@ class RAMIntDataAccess extends AbstractDataAccess
     }
 
     @Override
-    public boolean ensureCapacity(long bytes)
+    public boolean ensureCapacity( long bytes )
     {
         if (bytes < 0)
             throw new IllegalArgumentException("new capacity has to be strictly positive");
@@ -266,8 +266,8 @@ class RAMIntDataAccess extends AbstractDataAccess
         if (bytePos % 4 != 0 && bytePos % 4 != 2)
             throw new IllegalMonitorStateException("bytePos of wrong multiple for RAMInt " + bytePos);
 
-        long tmpIndex = bytePos >>> 1;
-        int bufferIndex = (int) (tmpIndex >>> segmentSizeIntsPower);
+        long tmpIndex = bytePos >> 1;
+        int bufferIndex = (int) (tmpIndex >> segmentSizeIntsPower);
         int index = (int) (tmpIndex & indexDivisor);
         if (tmpIndex * 2 == bytePos)
             return (short) segments[bufferIndex][index];

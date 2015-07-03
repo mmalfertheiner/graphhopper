@@ -21,6 +21,7 @@ import com.graphhopper.coll.GHBitSet;
 import com.graphhopper.coll.GHBitSetImpl;
 import com.graphhopper.storage.GraphStorage;
 import com.graphhopper.util.*;
+
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -77,7 +78,7 @@ public class PrepareRoutingSubnetworks
         keepLargeNetworks(map);
 
         int unvisitedDeadEnds = -1;
-        if ((this.minOneWayNetworkSize > 0) && singleEncoder != null)
+        if (minOneWayNetworkSize > 0 && singleEncoder != null)
             unvisitedDeadEnds = removeDeadEndUnvisitedNetworks(singleEncoder);
 
         logger.info("optimize to remove subnetworks (" + map.size() + "), zero-degree-nodes (" + del + "), "
@@ -148,11 +149,12 @@ public class PrepareRoutingSubnetworks
      */
     void keepLargeNetworks( Map<Integer, Integer> map )
     {
-        if (map.size() < 2)
+        if (map.size() <= 1)
             return;
 
         int biggestStart = -1;
         int maxCount = -1;
+        int allRemoved = 0;
         GHBitSetImpl bs = new GHBitSetImpl(g.getNodes());
         for (Entry<Integer, Integer> e : map.entrySet())
         {
@@ -163,32 +165,42 @@ public class PrepareRoutingSubnetworks
                 continue;
             }
 
+            int removed;
             if (maxCount < e.getValue())
             {
                 // new biggest area found. remove old
-                removeNetwork(biggestStart, maxCount, bs);
+                removed = removeNetwork(biggestStart, maxCount, bs);
 
                 biggestStart = e.getKey();
                 maxCount = e.getValue();
             } else
             {
-                removeNetwork(e.getKey(), e.getValue(), bs);
+                removed = removeNetwork(e.getKey(), e.getValue(), bs);
             }
+
+            allRemoved += removed;
+            if (removed > g.getNodes() / 3)
+                throw new IllegalStateException("Too many nodes were removed: " + removed + ", all nodes:" + g.getNodes() + ", all removed:" + allRemoved);
         }
+
+        if (allRemoved > g.getNodes() / 2)
+            throw new IllegalStateException("Too many total nodes were removed: " + allRemoved + ", all nodes:" + g.getNodes());
     }
 
     /**
      * Deletes the complete subnetwork reachable through start
      */
-    void removeNetwork( int start, int entries, final GHBitSet bs )
+    int removeNetwork( int start, int entries, final GHBitSet bs )
     {
         if (entries >= minNetworkSize)
         {
             // logger.info("did not remove large network (" + entries + ")");
-            return;
+            return 0;
         }
+
+        final AtomicInteger removed = new AtomicInteger(0);
         EdgeExplorer explorer = g.createEdgeExplorer(edgeFilter);
-        new DepthFirstSearch()
+        new BreadthFirstSearch()
         {
             @Override
             protected GHBitSet createBitSet()
@@ -200,9 +212,33 @@ public class PrepareRoutingSubnetworks
             protected boolean goFurther( int nodeId )
             {
                 g.markNodeRemoved(nodeId);
+                removed.incrementAndGet();
                 return super.goFurther(nodeId);
             }
         }.start(explorer, start);
+
+        if (entries != removed.get())
+            throw new IllegalStateException("Did not expect " + removed.get() + " removed nodes; "
+                    + " Expected:" + entries + ", all nodes:" + g.getNodes() + "; "
+                    + " Neighbours:" + toString(explorer.setBaseNode(start)) + "; "
+                    + " Start:" + start + "  (" + g.getNodeAccess().getLat(start) + "," + g.getNodeAccess().getLon(start) + ")");
+
+        return removed.get();
+    }
+
+    String toString( EdgeIterator iter )
+    {
+        String str = "";
+        while (iter.next())
+        {
+            int adjNode = iter.getAdjNode();
+            str += adjNode + " (" + g.getNodeAccess().getLat(adjNode) + "," + g.getNodeAccess().getLon(adjNode) + "), ";
+            str += "speed  (fwd:" + singleEncoder.getSpeed(iter.getFlags()) + ", rev:" + singleEncoder.getReverseSpeed(iter.getFlags()) + "), ";
+            str += "access (fwd:" + singleEncoder.isForward(iter.getFlags()) + ", rev:" + singleEncoder.isBackward(iter.getFlags()) + "), ";
+            str += "distance:" + iter.getDistance();
+            str += ";\n ";
+        }
+        return str;
     }
 
     /**
@@ -228,21 +264,21 @@ public class PrepareRoutingSubnetworks
     }
 
     /**
-     * Clean small networks that will be never be visited by this explorer See #86 For example,
+     * Clean small networks that will be never be visited by this explorer See #86 for example,
      * small areas like parking lots are sometimes connected to the whole network through a one-way
-     * road. This is clearly an error - but is causes the routing to fail when point get connected
-     * to this small area. This routines removed all these points from the graph.
+     * road. This is clearly an error - but is causes the routing to fail when a point gets
+     * connected to this small area. This routine removes all these points from the graph.
      * <p/>
-     * @return number of removed nodes;
+     * @return number of removed nodes
      */
     public int removeDeadEndUnvisitedNetworks( final FlagEncoder encoder )
     {
-        // Partition g into strongly connected components using Tarjan's Algorithm.
+        // Partition g into strongly connected components using Tarjan's algorithm.
         final EdgeFilter filter = new DefaultEdgeFilter(encoder, false, true);
         List<TIntArrayList> components = new TarjansStronglyConnectedComponentsAlgorithm(g, filter).findComponents();
 
         // remove components less than minimum size
-        int removed = 0;
+        int removedNodes = 0;
         for (TIntArrayList component : components)
         {
             if (component.size() < minOneWayNetworkSize)
@@ -250,10 +286,10 @@ public class PrepareRoutingSubnetworks
                 for (int i = 0; i < component.size(); i++)
                 {
                     g.markNodeRemoved(component.get(i));
-                    removed++;
+                    removedNodes++;
                 }
             }
         }
-        return removed;
+        return removedNodes;
     }
 }

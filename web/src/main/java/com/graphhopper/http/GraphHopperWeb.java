@@ -22,7 +22,9 @@ import com.graphhopper.GHResponse;
 import com.graphhopper.GraphHopperAPI;
 import com.graphhopper.util.*;
 import com.graphhopper.util.shapes.GHPoint;
+
 import java.util.List;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.slf4j.Logger;
@@ -89,8 +91,7 @@ public class GraphHopperWeb implements GraphHopperAPI
     @Override
     public GHResponse route( GHRequest request )
     {
-        StopWatch sw = new StopWatch().start();
-        double took = 0;
+        StopWatch sw = new StopWatch().start();        
         try
         {
             String places = "";
@@ -126,41 +127,29 @@ public class GraphHopperWeb implements GraphHopperAPI
             if (!tmpKey.isEmpty())
                 url += "&key=" + tmpKey;
 
-            String str = downloader.downloadAsString(url);
+            String str = downloader.downloadAsString(url, true);
             JSONObject json = new JSONObject(str);
 
-            if (json.has("message"))
-                throw new RuntimeException(json.getString("message") + ", code:" + json.getInt("code"));
-
             GHResponse res = new GHResponse();
-
-            if (json.getJSONObject("info").has("errors"))
-            {
-                JSONArray errors = json.getJSONObject("info").getJSONArray("errors");
-                readErrors(res.getErrors(), errors);
+            readErrors(res.getErrors(), json);
+            if (res.hasErrors())
                 return res;
+            
+            JSONArray paths = json.getJSONArray("paths");
+            JSONObject firstPath = paths.getJSONObject(0);
+            readPath(res, firstPath, tmpCalcPoints, tmpInstructions, tmpElevation);
+            return res;
 
-            } else
-            {
-                took = json.getJSONObject("info").getDouble("took");
-                JSONArray paths = json.getJSONArray("paths");
-                JSONObject firstPath = paths.getJSONObject(0);
-                readPath(res, firstPath, tmpCalcPoints, tmpInstructions, tmpElevation);
-                return res;
-            }
         } catch (Exception ex)
         {
             throw new RuntimeException("Problem while fetching path " + request.getPoints() + ": " + ex.getMessage(), ex);
-        } finally
-        {
-            logger.debug("Full request took:" + sw.stop().getSeconds() + ", API took:" + took);
         }
     }
 
     public static void readPath( GHResponse res, JSONObject firstPath,
-            boolean tmpCalcPoints,
-            boolean tmpInstructions,
-            boolean tmpElevation )
+                                 boolean tmpCalcPoints,
+                                 boolean tmpInstructions,
+                                 boolean tmpElevation )
     {
         double distance = firstPath.getDouble("distance");
         long time = firstPath.getLong("time");
@@ -229,37 +218,57 @@ public class GraphHopperWeb implements GraphHopperAPI
         res.setDistance(distance).setTime(time);
     }
 
-    public static void readErrors( List<Throwable> errors, JSONArray errorJson )
+    public static void readErrors( List<Throwable> errors, JSONObject json )
     {
+        JSONArray errorJson;
+
+        if (json.has("message"))
+        {
+            if (json.has("hints"))
+            {
+                errorJson = json.getJSONArray("hints");
+            } else
+            {
+                // should not happen
+                errors.add(new RuntimeException(json.getString("message")));
+                return;
+            }
+        } else if (json.has("info"))
+        {
+            // deprecated JSON format for errors, remove in 0.5 release
+            JSONObject jsonInfo = json.getJSONObject("info");
+            if (jsonInfo.has("errors"))
+                errorJson = jsonInfo.getJSONArray("errors");
+            else
+                return;
+
+        } else
+            return;
+
         for (int i = 0; i < errorJson.length(); i++)
         {
             JSONObject error = errorJson.getJSONObject(i);
             String exClass = "";
             if (error.has("details"))
-            {
                 exClass = error.getString("details");
-            }
+
             String exMessage = error.getString("message");
 
             if (exClass.equals(UnsupportedOperationException.class.getName()))
-            {
                 errors.add(new UnsupportedOperationException(exMessage));
-            } else if (exClass.equals(IllegalStateException.class.getName()))
-            {
+            else if (exClass.equals(IllegalStateException.class.getName()))
                 errors.add(new IllegalStateException(exMessage));
-            } else if (exClass.equals(RuntimeException.class.getName()))
-            {
+            else if (exClass.equals(RuntimeException.class.getName()))
                 errors.add(new RuntimeException(exMessage));
-            } else if (exClass.equals(IllegalArgumentException.class.getName()))
-            {
+            else if (exClass.equals(IllegalArgumentException.class.getName()))
                 errors.add(new IllegalArgumentException(exMessage));
-            } else if (exClass.isEmpty())
-            {
-                errors.add(new Exception(exMessage));
-            } else
-            {
-                errors.add(new Exception(exClass + " " + exMessage));
-            }
+            else if (exClass.isEmpty())
+                errors.add(new RuntimeException(exMessage));
+            else
+                errors.add(new RuntimeException(exClass + " " + exMessage));
         }
+
+        if (json.has("message") && errors.isEmpty())
+            errors.add(new RuntimeException(json.getString("message")));
     }
 }

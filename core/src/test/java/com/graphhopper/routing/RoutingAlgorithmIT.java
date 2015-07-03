@@ -33,12 +33,15 @@ import com.graphhopper.storage.index.QueryResult;
 import com.graphhopper.util.GHUtility;
 import com.graphhopper.util.Helper;
 import com.graphhopper.util.StopWatch;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.zip.GZIPInputStream;
+
 import static org.junit.Assert.*;
+
 import org.junit.Before;
 import org.junit.Test;
 
@@ -92,6 +95,35 @@ public class RoutingAlgorithmIT
 
         assertEquals(43.736989, g.getNodeAccess().getLat(10), 1e-6);
         assertEquals(7.429758, g.getNodeAccess().getLon(201), 1e-6);
+    }
+
+    @Test
+    public void testMonacoMotorcycle()
+    {
+        List<OneRun> list = new ArrayList<OneRun>();
+        list.add(new OneRun(43.730729, 7.42135, 43.727697, 7.419199, 2697, 117));
+        list.add(new OneRun(43.727687, 7.418737, 43.74958, 7.436566, 3749, 170));
+        list.add(new OneRun(43.728677, 7.41016, 43.739213, 7.4277, 3164, 165));
+        list.add(new OneRun(43.733802, 7.413433, 43.739662, 7.424355, 2423, 141));
+        list.add(new OneRun(43.730949, 7.412338, 43.739643, 7.424542, 2253, 120));
+        list.add(new OneRun(43.727592, 7.419333, 43.727712, 7.419333, 0, 1));
+        runAlgo(testCollector, "files/monaco.osm.gz", "target/monaco-mc-gh",
+                list, "motorcycle", true, "motorcycle", "fastest", true);
+
+        assertEquals(testCollector.toString(), 0, testCollector.errors.size());
+    }
+
+    @Test
+    public void testBike2_issue432()
+    {
+        List<OneRun> list = new ArrayList<OneRun>();
+        list.add(new OneRun(52.349969, 8.013813, 52.349713, 8.013293, 56, 7));
+        // reverse route avoids the location
+        list.add(new OneRun(52.349713, 8.013293, 52.349969, 8.013813, 293, 21));
+        runAlgo(testCollector, "files/map-bug432.osm.gz", "target/map-bug432-gh",
+                list, "bike2", true, "bike2", "fastest", true);
+
+        assertEquals(testCollector.toString(), 0, testCollector.errors.size());
     }
 
     @Test
@@ -490,8 +522,8 @@ public class RoutingAlgorithmIT
      * takes a bit longer
      */
     Graph runAlgo( TestAlgoCollector testCollector, String osmFile,
-            String graphFile, List<OneRun> forEveryAlgo, String importVehicles,
-            boolean testAlsoCH, String vehicle, String weightStr, boolean is3D )
+                   String graphFile, List<OneRun> forEveryAlgo, String importVehicles,
+                   boolean testAlsoCH, String vehicle, String weightStr, boolean is3D )
     {
         AlgoHelperEntry algoEntry = null;
         OneRun tmpOneRun = null;
@@ -661,8 +693,8 @@ public class RoutingAlgorithmIT
     }
 
     static List<AlgoHelperEntry> createAlgos( Graph g,
-            LocationIndex idx, final FlagEncoder encoder, boolean withCh,
-            final TraversalMode tMode, final Weighting weighting, final EncodingManager manager )
+                                              LocationIndex idx, final FlagEncoder encoder, boolean withCh,
+                                              final TraversalMode tMode, final Weighting weighting, final EncodingManager manager )
     {
         List<AlgoHelperEntry> prepare = new ArrayList<AlgoHelperEntry>();
         prepare.add(new AlgoHelperEntry(g, new AlgorithmOptions(AlgorithmOptions.ASTAR, encoder, weighting, tMode), idx));
@@ -679,7 +711,7 @@ public class RoutingAlgorithmIT
         {
             final LevelGraph graphCH = (LevelGraph) ((GraphStorage) g).copyTo(new GraphBuilder(manager).
                     set3D(g.getNodeAccess().is3D()).levelGraphCreate());
-            final PrepareContractionHierarchies prepareCH = new PrepareContractionHierarchies(new GHDirectory("", DAType.RAM_INT), 
+            final PrepareContractionHierarchies prepareCH = new PrepareContractionHierarchies(new GHDirectory("", DAType.RAM_INT),
                     graphCH, encoder, weighting, tMode);
             prepareCH.doWork();
             LocationIndex idxCH = new LocationIndexTree(graphCH.getBaseGraph(), new RAMDirectory()).prepareIndex();

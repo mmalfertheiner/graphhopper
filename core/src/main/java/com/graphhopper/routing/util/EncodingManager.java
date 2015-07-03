@@ -26,7 +26,6 @@ import com.graphhopper.reader.OSMWay;
 import com.graphhopper.storage.Directory;
 import com.graphhopper.storage.RAMDirectory;
 import com.graphhopper.storage.StorableProperties;
-import com.graphhopper.util.BitUtil;
 import com.graphhopper.util.EdgeIteratorState;
 import com.graphhopper.util.Helper;
 import com.graphhopper.util.PMap;
@@ -163,8 +162,10 @@ public class EncodingManager
             else
                 throw new IllegalArgumentException("entry in encoder list not supported " + entry);
 
-            if (configuration.has("version")) {
-                if (fe.getVersion() != configuration.getLong("version", -1)) {
+            if (configuration.has("version"))
+            {
+                if (fe.getVersion() != configuration.getInt("version", -1))
+                {
                     throw new IllegalArgumentException("Encoder " + entry + " was used in version "
                             + configuration.getLong("version", -1) + ", but current version is " + fe.getVersion());
                 }
@@ -176,7 +177,7 @@ public class EncodingManager
     }
 
     private static final String ERR = "Encoders are requesting more than %s bits of %s flags. ";
-    private static final String WAY_ERR = "Decrease the number of vehicles or increase the flags to take long via osmreader.bytesForFlags=8";
+    private static final String WAY_ERR = "Decrease the number of vehicles or increase the flags to take long via graph.bytesForFlags=8";
 
     private void registerEncoder( AbstractFlagEncoder encoder )
     {

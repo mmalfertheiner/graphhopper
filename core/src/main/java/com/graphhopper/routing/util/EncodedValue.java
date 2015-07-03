@@ -92,7 +92,7 @@ public class EncodedValue
     {
         // find value
         flags &= mask;
-        flags >>= shift;
+        flags >>>= shift;
         return Math.round(flags * factor);
     }
 
@@ -113,7 +113,7 @@ public class EncodedValue
 
     /**
      * Swap the contents controlled by this value encoder with the given value.
-     * <p>
+     * <p/>
      * @return the new flags
      */
     public long swap( long flags, EncodedValue otherEncoder )
