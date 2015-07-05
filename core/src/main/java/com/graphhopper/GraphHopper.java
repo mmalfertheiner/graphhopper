@@ -21,6 +21,7 @@ import com.graphhopper.reader.DataReader;
 import com.graphhopper.reader.OSMReader;
 import com.graphhopper.reader.dem.CGIARProvider;
 import com.graphhopper.reader.dem.ElevationProvider;
+import com.graphhopper.reader.dem.LowPrecisionSRTMProvider;
 import com.graphhopper.reader.dem.SRTMProvider;
 import com.graphhopper.routing.*;
 import com.graphhopper.routing.ch.PrepareContractionHierarchies;
@@ -541,7 +542,7 @@ public class GraphHopper implements GraphHopperAPI
         ElevationProvider tmpProvider = ElevationProvider.NOOP;
         if (eleProviderStr.equalsIgnoreCase("srtm"))
         {
-            tmpProvider = new SRTMProvider();
+            tmpProvider = new LowPrecisionSRTMProvider();
         } else if (eleProviderStr.equalsIgnoreCase("cgiar"))
         {
             CGIARProvider cgiarProvider = new CGIARProvider();

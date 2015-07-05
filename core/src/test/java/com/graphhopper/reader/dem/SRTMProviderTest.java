@@ -40,7 +40,7 @@ public class SRTMProviderTest
     @Before
     public void setUp()
     {
-        instance = new SRTMProvider();
+        instance = new LowPrecisionSRTMProvider();
     }
 
     @After

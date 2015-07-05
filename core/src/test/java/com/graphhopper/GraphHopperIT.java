@@ -17,6 +17,7 @@
  */
 package com.graphhopper;
 
+import com.graphhopper.reader.dem.LowPrecisionSRTMProvider;
 import com.graphhopper.reader.dem.SRTMProvider;
 import com.graphhopper.routing.AlgorithmOptions;
 import com.graphhopper.routing.RoutingAlgorithmFactorySimple;
@@ -230,7 +231,7 @@ public class GraphHopperIT
                 setGraphHopperLocation(tmpGraphFile).
                 setEncodingManager(new EncodingManager(importVehicles));
 
-        tmpHopper.setElevationProvider(new SRTMProvider().setCacheDir(new File("./files/")));
+        tmpHopper.setElevationProvider(new LowPrecisionSRTMProvider().setCacheDir(new File("./files/")));
         tmpHopper.importOrLoad();
 
         GHResponse rsp = tmpHopper.route(new GHRequest(43.730729, 7.421288, 43.727697, 7.419199).

@@ -17,6 +17,7 @@
  */
 package com.graphhopper.routing;
 
+import com.graphhopper.reader.dem.LowPrecisionSRTMProvider;
 import com.graphhopper.routing.util.TestAlgoCollector;
 import com.graphhopper.GraphHopper;
 import com.graphhopper.reader.PrinctonReader;
@@ -539,7 +540,7 @@ public class RoutingAlgorithmIT
                     setGraphHopperLocation(graphFile).
                     setEncodingManager(new EncodingManager(importVehicles));
             if (is3D)
-                hopper.setElevationProvider(new SRTMProvider().setCacheDir(new File("./files")));
+                hopper.setElevationProvider(new LowPrecisionSRTMProvider().setCacheDir(new File("./files")));
 
             hopper.importOrLoad();
 
