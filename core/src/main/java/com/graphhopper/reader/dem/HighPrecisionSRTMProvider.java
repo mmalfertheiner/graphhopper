@@ -18,15 +18,7 @@
  */
 package com.graphhopper.reader.dem;
 
-import com.graphhopper.storage.*;
-import com.graphhopper.util.BitUtil;
-import com.graphhopper.util.Downloader;
-import gnu.trove.map.hash.TIntObjectHashMap;
-
 import java.io.*;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Elevation data from NASA (SRTM). Downloaded from http://dds.cr.usgs.gov/srtm/version2_1/SRTM3/
