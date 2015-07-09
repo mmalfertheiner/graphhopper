@@ -57,6 +57,7 @@ public class HighPrecisionSRTMProvider extends SRTMProvider
     {
         WIDTH = 3601;
         baseUrl = "http://e4ftl01.cr.usgs.gov/SRTM/SRTMGL1.003/2000.02.11/";
+        setCacheDir(new File("/tmp/srtm1degV3"));
     }
 
 
@@ -76,7 +77,7 @@ public class HighPrecisionSRTMProvider extends SRTMProvider
     @Override
     public String toString()
     {
-        return "HighPrecisionSRTM";
+        return "SRTM1V3";
     }
 
 }
