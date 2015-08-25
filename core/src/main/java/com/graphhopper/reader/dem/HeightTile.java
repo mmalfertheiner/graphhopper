@@ -43,6 +43,7 @@ public class HeightTile
     private final double lowerBound;
     private final double higherBound;
     private boolean calcMean;
+    private boolean calcMedian;
 
     public HeightTile( int minLat, int minLon, int width, double precision, int degree )
     {
@@ -59,6 +60,12 @@ public class HeightTile
     public HeightTile setCalcMean( boolean b )
     {
         this.calcMean = b;
+        return this;
+    }
+
+    public HeightTile setCalcMedian( boolean b )
+    {
+        this.calcMedian = b;
         return this;
     }
 
@@ -120,6 +127,18 @@ public class HeightTile
                 value += includePoint(daPointer + 2 * width, counter);
         }
 
+        if (calcMedian){
+            //Filter filter = new MedianFilter(extractSurroundingPx(daPointer, value, lonSimilar, latSimilar));
+
+            double[] kernel = {0.125,0.125,0.125,0.125,0,0.125,0.125,0.125,0.125};
+            int[] px = extractSurroundingPx(daPointer, value, lonSimilar, latSimilar);
+            Filter filter = new LinearFilter(px, kernel);
+            System.out.print("Old value: " + value);
+            value = filter.apply();
+            System.out.print(", Median value: " + value + "\n");
+
+        }
+
         return (double) value / counter.get();
     }
 
@@ -131,6 +150,37 @@ public class HeightTile
 
         counter.incrementAndGet();
         return value;
+    }
+
+    private int getAdjacentPx(int pointer, boolean exists) {
+
+        int value = -1;
+
+        if(exists) {
+            value = heights.getShort(pointer);
+
+            if (value == Short.MIN_VALUE)
+                value = 0;
+        }
+
+        return value;
+    }
+
+    private int[] extractSurroundingPx(int daPointer, int value, int lonSimilar, int latSimilar) {
+
+        int pixels[] = new int[9];
+        pixels[4] = value;
+
+        pixels[0] = getAdjacentPx((daPointer - 2 * width) - 2, lonSimilar > 0 && latSimilar > 0);
+        pixels[1] = getAdjacentPx(daPointer - 2 * width, latSimilar > 0);
+        pixels[2] = getAdjacentPx((daPointer - 2 * width) + 2, lonSimilar < width - 1 && latSimilar > 0);
+        pixels[3] = getAdjacentPx(daPointer - 2, lonSimilar > 0);
+        pixels[5] = getAdjacentPx(daPointer + 2, lonSimilar < width - 1);
+        pixels[6] = getAdjacentPx((daPointer + 2 * width) - 2, lonSimilar > 0 && latSimilar < width - 1);
+        pixels[7] = getAdjacentPx(daPointer + 2 * width, latSimilar < width - 1);
+        pixels[8] = getAdjacentPx((daPointer + 2 * width) + 2, lonSimilar < width - 1 && latSimilar < width - 1);
+
+        return pixels;
     }
 
     public void toImage( String imageFile ) throws IOException

@@ -54,6 +54,7 @@ public abstract class SRTMProvider implements ElevationProvider
     protected final double invPrecision = 1 / precision;
     // mirror: base = "http://mirror.ufs.ac.za/datasets/SRTM3/"
     private boolean calcMean = false;
+    private boolean calcMedian = false;
     protected String baseUrl;
 
     @Override
@@ -62,6 +63,10 @@ public abstract class SRTMProvider implements ElevationProvider
         this.calcMean = calcMean;
     }
 
+    @Override
+    public void setCalcMedian( boolean calcMedian) {
+        this.calcMedian = calcMedian;
+    }
 
     // use int key instead of string for lower memory usage
     protected int calcIntKey( double lat, double lon )
@@ -138,6 +143,7 @@ public abstract class SRTMProvider implements ElevationProvider
             int minLon = down(lon);
             demProvider = new HeightTile(minLat, minLon, WIDTH, precision, 1);
             demProvider.setCalcMean(calcMean);
+            demProvider.setCalcMedian(calcMedian);
             cacheData.put(intKey, demProvider);
             DataAccess heights = getDirectory().find("dem" + intKey);
             demProvider.setHeights(heights);

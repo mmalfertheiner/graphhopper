@@ -69,12 +69,18 @@ public class CGIARProvider implements ElevationProvider
     private final double invPrecision = 1 / precision;
     private final int degree = 5;
     private boolean calcMean = false;
+    private boolean calcMedian = false;
     private boolean autoRemoveTemporary = true;
 
     @Override
     public void setCalcMean( boolean eleCalcMean )
     {
         calcMean = eleCalcMean;
+    }
+
+    @Override
+    public void setCalcMedian( boolean calcMedian) {
+        this.calcMedian = calcMedian;
     }
 
     /**

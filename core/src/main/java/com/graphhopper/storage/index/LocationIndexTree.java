@@ -182,6 +182,9 @@ public class LocationIndexTree implements LocationIndex
         parts = Math.round(Math.sqrt(parts));
         deltaLat = (bounds.maxLat - bounds.minLat) / parts;
         deltaLon = (bounds.maxLon - bounds.minLon) / parts;
+
+        System.out.println("INFO parts: " + parts + ", deltaLat: " + deltaLat + ", deltaLon: " + deltaLon);
+
     }
 
     private LocationIndexTree initEntries( int[] entries )

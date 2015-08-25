@@ -56,6 +56,12 @@ public interface ElevationProvider
     void setCalcMean( boolean calcMean );
 
     /**
+     * Configuration option to include surrounding elevation points when fetching the elevation. Has
+     * only an effect if called before the first getEle call. Turned off by default.
+     */
+    void setCalcMedian (boolean calcMedian);
+
+    /**
      * Release resources.
      */
     void release();
@@ -93,6 +99,11 @@ public interface ElevationProvider
 
         @Override
         public void setCalcMean( boolean eleCalcMean )
+        {
+        }
+
+        @Override
+        public void setCalcMedian( boolean eleCalcMedian )
         {
         }
     };
