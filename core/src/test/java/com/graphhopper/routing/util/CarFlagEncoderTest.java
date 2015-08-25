@@ -80,6 +80,11 @@ public class CarFlagEncoderTest
         way.setTag("foot", "yes");
         assertFalse(encoder.acceptWay(way) > 0);
         assertFalse(encoder.isFerry(encoder.acceptWay(way)));
+        
+        way.clearTags();
+        way.setTag("access", "yes");
+        way.setTag("motor_vehicle", "no");
+        assertFalse(encoder.acceptWay(way) > 0);
 
         way.clearTags();
         way.setTag("highway", "service");
@@ -495,10 +500,10 @@ public class CarFlagEncoderTest
     public void testRegisterOnlyOnceAllowed()
     {
         CarFlagEncoder instance = new CarFlagEncoder(10, 0.5, 0);
-        EncodingManager em = new EncodingManager(instance);
+        EncodingManager tmpEM = new EncodingManager(instance);
         try
         {
-            em = new EncodingManager(instance);
+            tmpEM = new EncodingManager(instance);
             assertTrue(false);
         } catch (IllegalStateException ex)
         {

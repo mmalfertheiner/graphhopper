@@ -23,13 +23,13 @@ import com.graphhopper.util.PMap;
 
 /**
  * Special weighting for (motor)bike
- * <p/>
+ * <p>
  * @author Peter Karich
  */
 public class PriorityWeighting extends FastestWeighting
 {
     /**
-     * For now used only in BikeCommonFlagEncoder and MotorcycleFlagEncoder
+     * For now used only in BikeCommonFlagEncoder, FootEncoder and MotorcycleFlagEncoder
      */
     public static final int KEY = 101;
 
@@ -49,6 +49,6 @@ public class PriorityWeighting extends FastestWeighting
         double weight = super.calcWeight(edgeState, reverse, prevOrNextEdgeId);
         if (Double.isInfinite(weight))
             return Double.POSITIVE_INFINITY;
-        return weight / (0.5 + encoder.getDouble(edgeState.getFlags(), KEY));
+        return weight / (0.5 + flagEncoder.getDouble(edgeState.getFlags(), KEY));
     }
 }

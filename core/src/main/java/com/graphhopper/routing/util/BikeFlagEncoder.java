@@ -22,7 +22,7 @@ import com.graphhopper.util.PMap;
 
 /**
  * Specifies the settings for cycletouring/trekking
- * <p/>
+ * <p>
  * @author ratrun
  * @author Peter Karich
  */
@@ -42,7 +42,7 @@ public class BikeFlagEncoder extends BikeCommonFlagEncoder
     {
         this((int) properties.getLong("speedBits", 4),
                 properties.getLong("speedFactor", 2),
-                properties.getBool("turnCosts", false) ? 3 : 0);
+                properties.getBool("turnCosts", false) ? 1 : 0);
         this.properties = properties;
         this.setBlockFords(properties.getBool("blockFords", true));
     }

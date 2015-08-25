@@ -30,7 +30,7 @@ import com.graphhopper.util.PMap;
  *        weighting(weighting).
  *        build();
  * </pre>
- * <p/>
+ * <p>
  * @author Peter Karich
  */
 public class AlgorithmOptions
@@ -183,6 +183,12 @@ public class AlgorithmOptions
         public Builder flagEncoder( FlagEncoder flagEncoder )
         {
             this.opts.flagEncoder = flagEncoder;
+            return this;
+        }
+
+        public Builder hints( PMap hints )
+        {
+            this.opts.hints.put(hints);
             return this;
         }
 

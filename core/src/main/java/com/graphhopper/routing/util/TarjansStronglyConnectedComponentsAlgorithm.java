@@ -1,7 +1,7 @@
 package com.graphhopper.routing.util;
 
 import com.graphhopper.coll.GHBitSetImpl;
-import com.graphhopper.storage.GraphStorage;
+import com.graphhopper.storage.GraphHopperStorage;
 import com.graphhopper.util.EdgeIterator;
 import gnu.trove.list.array.TIntArrayList;
 import gnu.trove.stack.array.TIntArrayStack;
@@ -11,17 +11,16 @@ import java.util.List;
 import java.util.Stack;
 
 /**
- * Implementation of Tarjan's algorithm using an explicit stack.
- * (The traditional recursive approach runs into stack overflow pretty quickly.)
- * <p/>
- * Used for finding strongly connected components to detect dead-ends.
- * <p/>
- * http://en.wikipedia.org/wiki/Tarjan's_strongly_connected_components_algorithm
+ * Implementation of Tarjan's algorithm using an explicit stack. The traditional recursive approach
+ * runs into stack overflow pretty quickly. Used for finding strongly connected components to detect
+ * dead-ends.
+ * <p>
+ * See http://en.wikipedia.org/wiki/Tarjan's_strongly_connected_components_algorithm. See
+ * http://www.timl.id.au/?p=327 and http://homepages.ecs.vuw.ac.nz/~djp/files/P05.pdf
  */
 public class TarjansStronglyConnectedComponentsAlgorithm
 {
-
-    private final GraphStorage g;
+    private final GraphHopperStorage graph;
     private final TIntArrayStack nodeStack;
     private final GHBitSetImpl onStack;
     private final int[] nodeIndex;
@@ -31,13 +30,13 @@ public class TarjansStronglyConnectedComponentsAlgorithm
     private int index = 1;
     private final EdgeFilter edgeFilter;
 
-    public TarjansStronglyConnectedComponentsAlgorithm( final GraphStorage g, final EdgeFilter edgeFilter )
+    public TarjansStronglyConnectedComponentsAlgorithm( GraphHopperStorage graph, final EdgeFilter edgeFilter )
     {
-        this.g = g;
+        this.graph = graph;
         this.nodeStack = new TIntArrayStack();
-        this.onStack = new GHBitSetImpl(g.getNodes());
-        this.nodeIndex = new int[g.getNodes()];
-        this.nodeLowLink = new int[g.getNodes()];
+        this.onStack = new GHBitSetImpl(graph.getNodes());
+        this.nodeIndex = new int[graph.getNodes()];
+        this.nodeLowLink = new int[graph.getNodes()];
         this.edgeFilter = edgeFilter;
     }
 
@@ -46,11 +45,10 @@ public class TarjansStronglyConnectedComponentsAlgorithm
      */
     public List<TIntArrayList> findComponents()
     {
-
-        int nodes = g.getNodes();
+        int nodes = graph.getNodes();
         for (int start = 0; start < nodes; start++)
         {
-            if (nodeIndex[start] == 0 && !g.isNodeRemoved(start))
+            if (nodeIndex[start] == 0 && !graph.isNodeRemoved(start))
             {
                 strongConnect(start);
             }
@@ -83,7 +81,7 @@ public class TarjansStronglyConnectedComponentsAlgorithm
                 nodeStack.push(start);
                 onStack.set(start);
 
-                iter = g.createEdgeExplorer(edgeFilter).setBaseNode(start);
+                iter = graph.createEdgeExplorer(edgeFilter).setBaseNode(start);
 
             } else
             { // if (state.isResume()) {
@@ -125,6 +123,7 @@ public class TarjansStronglyConnectedComponentsAlgorithm
                     onStack.clear(node);
                 }
                 component.add(start);
+                component.trimToSize();
                 onStack.clear(start);
 
                 components.add(component);

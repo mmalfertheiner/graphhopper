@@ -21,12 +21,7 @@ import com.graphhopper.routing.util.CarFlagEncoder;
 import com.graphhopper.routing.util.DefaultEdgeFilter;
 import com.graphhopper.routing.util.EncodingManager;
 import com.graphhopper.routing.util.FootFlagEncoder;
-import com.graphhopper.storage.Directory;
-import com.graphhopper.storage.Graph;
-import com.graphhopper.storage.GraphHopperStorage;
-import com.graphhopper.storage.MMapDirectory;
-import com.graphhopper.storage.NodeAccess;
-import com.graphhopper.storage.RAMDirectory;
+import com.graphhopper.storage.*;
 import com.graphhopper.util.DistanceCalc;
 import com.graphhopper.util.DistanceCalcEarth;
 import com.graphhopper.util.EdgeIterator;
@@ -53,6 +48,16 @@ public abstract class AbstractLocationIndexTester
 
     public abstract LocationIndex createIndex( Graph g, int resolution );
 
+    GraphHopperStorage createGHStorage( EncodingManager encodingManager )
+    {
+        return AbstractLocationIndexTester.this.createGHStorage(new RAMDirectory(), encodingManager, false);
+    }
+
+    GraphHopperStorage createGHStorage( Directory dir, EncodingManager encodingManager, boolean is3D )
+    {
+        return new GraphHopperStorage(dir, encodingManager, is3D, new GraphExtension.NoOpExtension()).create(100);
+    }
+
     public boolean hasEdgeSupport()
     {
         return false;
@@ -75,7 +80,7 @@ public abstract class AbstractLocationIndexTester
     @Test
     public void testSimpleGraph()
     {
-        Graph g = createGraph(new EncodingManager("CAR"));
+        Graph g = AbstractLocationIndexTester.this.createGHStorage(new EncodingManager("CAR"));
         initSimpleGraph(g);
 
         idx = createIndex(g, -1);
@@ -129,7 +134,7 @@ public abstract class AbstractLocationIndexTester
     @Test
     public void testSimpleGraph2()
     {
-        Graph g = createGraph(new EncodingManager("CAR"));
+        Graph g = AbstractLocationIndexTester.this.createGHStorage(new EncodingManager("CAR"));
         initSimpleGraph(g);
 
         idx = createIndex(g, -1);
@@ -197,8 +202,8 @@ public abstract class AbstractLocationIndexTester
             }
 
             assertTrue(i + " orig:" + (float) lat + "," + (float) lon
-                            + " full:" + fullLat + "," + fullLon + " fullDist:" + fullDist
-                            + " found:" + newLat + "," + newLon + " foundDist:" + newDist,
+                    + " full:" + fullLat + "," + fullLon + " fullDist:" + fullDist
+                    + " found:" + newLat + "," + newLon + " foundDist:" + newDist,
                     Math.abs(fullDist - newDist) < 50000);
         }
         fullIndex.close();
@@ -252,7 +257,7 @@ public abstract class AbstractLocationIndexTester
     {
         final EncodingManager encodingManager = new EncodingManager("CAR");
         int locs = 10000;
-        Graph g = createGraph(new MMapDirectory(location), encodingManager, false);
+        Graph g = AbstractLocationIndexTester.this.createGHStorage(new MMapDirectory(location), encodingManager, false);
         NodeAccess na = g.getNodeAccess();
         Random rand = new Random(12);
         for (int i = 0; i < locs; i++)
@@ -263,19 +268,9 @@ public abstract class AbstractLocationIndexTester
         Helper.close((Closeable) g);
     }
 
-    Graph createGraph( EncodingManager encodingManager )
-    {
-        return createGraph(new RAMDirectory(), encodingManager, false);
-    }
-
-    Graph createGraph( Directory dir, EncodingManager encodingManager, boolean is3D )
-    {
-        return new GraphHopperStorage(dir, encodingManager, is3D).create(100);
-    }
-
     public Graph createSampleGraph( EncodingManager encodingManager )
     {
-        Graph graph = createGraph(encodingManager);
+        Graph graph = AbstractLocationIndexTester.this.createGHStorage(encodingManager);
         // length does not matter here but lat,lon and outgoing edges do!
 
 //        
@@ -357,7 +352,7 @@ public abstract class AbstractLocationIndexTester
     public void testDifferentVehicles()
     {
         final EncodingManager encodingManager = new EncodingManager("CAR,FOOT");
-        Graph g = createGraph(encodingManager);
+        Graph g = AbstractLocationIndexTester.this.createGHStorage(encodingManager);
         initSimpleGraph(g);
         idx = createIndex(g, -1);
         assertEquals(1, idx.findID(1, -1));

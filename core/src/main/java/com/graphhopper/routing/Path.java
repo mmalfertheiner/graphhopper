@@ -33,7 +33,7 @@ import java.util.List;
  * Stores the nodes for the found path of an algorithm. It additionally needs the edgeIds to make
  * edge determination faster and less complex as there could be several edges (u,v) especially for
  * graphs with shortcuts.
- * <p/>
+ * <p>
  * @author Peter Karich
  * @author Ottavio Campana
  * @author jan soe
@@ -200,7 +200,7 @@ public class Path
      */
     public EdgeIteratorState getFinalEdge()
     {
-        return graph.getEdgeProps(edgeIds.get(edgeIds.size() - 1), endNode);
+        return graph.getEdgeIteratorState(edgeIds.get(edgeIds.size() - 1), endNode);
     }
 
     /**
@@ -221,7 +221,7 @@ public class Path
      */
     protected void processEdge( int edgeId, int adjNode )
     {
-        EdgeIteratorState iter = graph.getEdgeProps(edgeId, adjNode);
+        EdgeIteratorState iter = graph.getEdgeIteratorState(edgeId, adjNode);
         double dist = iter.getDistance();
         distance += dist;
         time += calcMillis(dist, iter.getFlags(), false);
@@ -260,7 +260,7 @@ public class Path
     /**
      * Iterates over all edges in this path sorted from start to end and calls the visitor callback
      * for every edge.
-     * <p/>
+     * <p>
      * @param visitor callback to handle every edge. The edge is decoupled from the iterator and can
      * be stored.
      */
@@ -270,14 +270,14 @@ public class Path
         int len = edgeIds.size();
         for (int i = 0; i < len; i++)
         {
-            EdgeIteratorState edgeBase = graph.getEdgeProps(edgeIds.get(i), tmpNode);
+            EdgeIteratorState edgeBase = graph.getEdgeIteratorState(edgeIds.get(i), tmpNode);
             if (edgeBase == null)
                 throw new IllegalStateException("Edge " + edgeIds.get(i) + " was empty when requested with node " + tmpNode
                         + ", array index:" + i + ", edges:" + edgeIds.size());
 
             tmpNode = edgeBase.getBaseNode();
             // more efficient swap, currently not implemented for virtual edges: visitor.next(edgeBase.detach(true), i);
-            edgeBase = graph.getEdgeProps(edgeBase.getEdge(), tmpNode);
+            edgeBase = graph.getEdgeIteratorState(edgeBase.getEdge(), tmpNode);
             visitor.next(edgeBase, i);
         }
     }
@@ -332,7 +332,7 @@ public class Path
 
     /**
      * This method calculated a list of points for this path
-     * <p/>
+     * <p>
      * @return this path its geometry
      */
     public PointList calcPoints()
@@ -425,7 +425,7 @@ public class Path
                 double latitude, longitude;
 
                 PointList wayGeo = edge.fetchWayGeometry(3);
-                boolean isRoundabout = encoder.isBool(flags, encoder.K_ROUNDABOUT);
+                boolean isRoundabout = encoder.isBool(flags, FlagEncoder.K_ROUNDABOUT);
 
                 if (wayGeo.getSize() <= 2)
                 {
@@ -499,7 +499,7 @@ public class Path
                         EdgeIterator edgeIter = outEdgeExplorer.setBaseNode(adjNode);
                         while (edgeIter.next())
                         {
-                            if (!encoder.isBool(edgeIter.getFlags(), encoder.K_ROUNDABOUT))
+                            if (!encoder.isBool(edgeIter.getFlags(), FlagEncoder.K_ROUNDABOUT))
                             {
                                 ((RoundaboutInstruction) prevInstruction).increaseExitNumber();
                                 break;

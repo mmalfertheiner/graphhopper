@@ -29,7 +29,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Elevation data from NASA (SRTM). Downloaded from http://dds.cr.usgs.gov/srtm/version2_1/SRTM3/
+ * Elevation data from NASA (SRTM).
  * <p>
  * Important information about SRTM: the coordinates of the lower-left corner of tile N40W118 are 40
  * degrees north latitude and 118 degrees west longitude. To be more exact, these coordinates refer

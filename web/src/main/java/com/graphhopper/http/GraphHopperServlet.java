@@ -49,7 +49,7 @@ import static javax.servlet.http.HttpServletResponse.SC_BAD_REQUEST;
  * Servlet to use GraphHopper in a remote client application like mobile or browser. Note: If type
  * is json it returns the points in GeoJson format (longitude,latitude) unlike the format "lat,lon"
  * used otherwise. See the full API response format in docs/web/api-doc.md
- * <p/>
+ * <p>
  *
  * @author Peter Karich
  */
@@ -63,7 +63,7 @@ public class GraphHopperServlet extends GHBaseServlet
     @Override
     public void doGet( HttpServletRequest httpReq, HttpServletResponse httpRes ) throws ServletException, IOException
     {
-        List<GHPoint> infoPoints = getPoints(httpReq, "point");
+        List<GHPoint> requestPoints = getPoints(httpReq, "point");
         GHResponse ghRsp = new GHResponse();
 
         // we can reduce the path length based on the maximum differences to the original coordinates
@@ -95,9 +95,10 @@ public class GraphHopperServlet extends GHBaseServlet
         } else if (enableElevation && !hopper.hasElevation())
         {
             ghRsp.addError(new IllegalArgumentException("Elevation not supported!"));
-        } else if (favoredHeadings.size() > 1 && favoredHeadings.size() != infoPoints.size())
+        } else if (favoredHeadings.size() > 1 && favoredHeadings.size() != requestPoints.size())
         {
-            ghRsp.addError(new IllegalArgumentException("number of headings must be <= 1 or equal number of points"));
+            ghRsp.addError(new IllegalArgumentException("The number of 'heading' parameters must be <= 1 "
+                    + "or equal to the number of points (" + requestPoints.size() + ")"));
         }
         if (!ghRsp.hasErrors())
         {
@@ -109,17 +110,17 @@ public class GraphHopperServlet extends GHBaseServlet
                 // if only one favored heading is specified take as start heading
                 if (favoredHeadings.size() == 1)
                 {
-                    List<Double> paddedHeadings = new ArrayList<Double>(Collections.nCopies(infoPoints.size(),
+                    List<Double> paddedHeadings = new ArrayList<Double>(Collections.nCopies(requestPoints.size(),
                             Double.NaN));
                     paddedHeadings.set(0, favoredHeadings.get(0));
-                    request = new GHRequest(infoPoints, paddedHeadings);
+                    request = new GHRequest(requestPoints, paddedHeadings);
                 } else
                 {
-                    request = new GHRequest(infoPoints, favoredHeadings);
+                    request = new GHRequest(requestPoints, favoredHeadings);
                 }
             } else
             {
-                request = new GHRequest(infoPoints);
+                request = new GHRequest(requestPoints);
             }
 
             initHints(request, httpReq.getParameterMap());
@@ -137,7 +138,7 @@ public class GraphHopperServlet extends GHBaseServlet
 
         float took = sw.stop().getSeconds();
         String infoStr = httpReq.getRemoteAddr() + " " + httpReq.getLocale() + " " + httpReq.getHeader("User-Agent");
-        String logStr = httpReq.getQueryString() + " " + infoStr + " " + infoPoints + ", took:"
+        String logStr = httpReq.getQueryString() + " " + infoStr + " " + requestPoints + ", took:"
                 + took + ", " + algoStr + ", " + weighting + ", " + vehicleStr;
         httpRes.setHeader("X-GH-Took", "" + Math.round(took * 1000));
 

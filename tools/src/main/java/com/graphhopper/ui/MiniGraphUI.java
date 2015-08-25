@@ -41,10 +41,10 @@ import org.slf4j.LoggerFactory;
 /**
  * A rough graphical user interface for visualizing the OSM graph. Mainly for debugging algorithms
  * and spatial datastructures.
- * <p/>
+ * <p>
  * Use the project at https://github.com/graphhopper/graphhopper-web for a
  * better/faster/userfriendly/... alternative!
- * <p/>
+ * <p>
  * @author Peter Karich
  */
 public class MiniGraphUI
@@ -76,11 +76,11 @@ public class MiniGraphUI
 
     public MiniGraphUI( GraphHopper hopper, boolean debug )
     {
-        this.graph = hopper.getGraph();
+        this.graph = hopper.getGraphHopperStorage();
         this.na = graph.getNodeAccess();
-        algoFactory = hopper.getAlgorithmFactory();
         encoder = hopper.getEncodingManager().getEncoder("car");
         weighting = hopper.createWeighting(new WeightingMap("fastest"), encoder);
+        algoFactory = hopper.getAlgorithmFactory(weighting);
         algoOpts = new AlgorithmOptions(AlgorithmOptions.DIJKSTRA_BI, encoder, weighting);
 
         logger.info("locations:" + graph.getNodes() + ", debug:" + debug + ", algoOpts:" + algoOpts);

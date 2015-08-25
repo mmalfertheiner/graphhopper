@@ -19,10 +19,7 @@ package com.graphhopper.routing;
 
 import com.graphhopper.routing.util.AllEdgesIterator;
 import com.graphhopper.routing.util.EdgeFilter;
-import com.graphhopper.storage.Graph;
-import com.graphhopper.storage.GraphExtension;
-import com.graphhopper.storage.NodeAccess;
-import com.graphhopper.storage.TurnCostExtension;
+import com.graphhopper.storage.*;
 import com.graphhopper.storage.index.QueryResult;
 import com.graphhopper.util.*;
 import com.graphhopper.util.shapes.BBox;
@@ -41,7 +38,7 @@ import java.util.*;
  * A class which is used to query the underlying graph with real GPS points. It does so by
  * introducing virtual nodes and edges. It is lightweight in order to be created every time a new
  * query comes in, which makes the behaviour thread safe.
- * <p/>
+ * <p>
  *
  * @author Peter Karich
  */
@@ -73,7 +70,7 @@ public class QueryGraph implements Graph
         mainGraph = graph;
         mainNodeAccess = graph.getNodeAccess();
         mainNodes = graph.getNodes();
-        mainEdges = graph.getAllEdges().getCount();
+        mainEdges = graph.getAllEdges().getMaxId();
 
         if (mainGraph.getExtension() instanceof TurnCostExtension)
             wrappedExtension = new QueryGraphTurnExt(this);
@@ -284,7 +281,7 @@ public class QueryGraph implements Graph
     @Override
     public Graph getBaseGraph()
     {
-        // Note: if the mainGraph of this QueryGraph is a LevelGraph then ignoring the shortcuts will produce a 
+        // Note: if the mainGraph of this QueryGraph is a CHGraph then ignoring the shortcuts will produce a 
         // huge gap of edgeIds between base and virtual edge ids. The only solution would be to move virtual edges
         // directly after normal edge ids which is ugly as we limit virtual edges to N edges and waste memory or make everything more complex.        
         return baseGraph;
@@ -371,7 +368,7 @@ public class QueryGraph implements Graph
      * @param incoming if true, incoming edges are unfavored, else outgoing edges
      * @return boolean indicating if enforcement took place
      */
-    public boolean enforceHeading( int nodeId, Double favoredHeading, boolean incoming )
+    public boolean enforceHeading( int nodeId, double favoredHeading, boolean incoming )
     {
         if (!isInitialized())
             throw new IllegalStateException("QueryGraph.lookup has to be called in before heading enforcement");
@@ -410,11 +407,11 @@ public class QueryGraph implements Graph
 
             if (Math.abs(delta) > 1.74) // penalize if a turn of more than 100°
             {
-                edge.setVirtualEdgePreference(true, false);
+                edge.setVirtualEdgePreference(true);
                 modifiedEdges.add(edge);
                 //also apply to opposite edge for reverse routing
                 VirtualEdgeIteratorState reverseEdge = virtualEdges.get(virtNodeIDintern * 4 + getPosOfReverseEdge(edgePos));
-                reverseEdge.setVirtualEdgePreference(true, true);
+                reverseEdge.setVirtualEdgePreference(true);
                 modifiedEdges.add(reverseEdge);
                 enforcementOccured = true;
             }
@@ -436,11 +433,11 @@ public class QueryGraph implements Graph
         if (!isVirtualNode(nodeId))
             return false;
 
-        VirtualEdgeIteratorState incomingEdge = (VirtualEdgeIteratorState) getEdgeProps(edgeId, nodeId);
-        VirtualEdgeIteratorState reverseEdge = (VirtualEdgeIteratorState) getEdgeProps(edgeId, incomingEdge.getBaseNode());
-        incomingEdge.setVirtualEdgePreference(true, !incoming);
+        VirtualEdgeIteratorState incomingEdge = (VirtualEdgeIteratorState) getEdgeIteratorState(edgeId, nodeId);
+        VirtualEdgeIteratorState reverseEdge = (VirtualEdgeIteratorState) getEdgeIteratorState(edgeId, incomingEdge.getBaseNode());
+        incomingEdge.setVirtualEdgePreference(true);
         modifiedEdges.add(incomingEdge);
-        reverseEdge.setVirtualEdgePreference(true, incoming);
+        reverseEdge.setVirtualEdgePreference(true);
         modifiedEdges.add(reverseEdge);
         return true;
     }
@@ -452,10 +449,8 @@ public class QueryGraph implements Graph
     {
         for (VirtualEdgeIteratorState edge : modifiedEdges)
         {
-            edge.setVirtualEdgePreference(false, false);
-            edge.setVirtualEdgePreference(false, true);
+            edge.setVirtualEdgePreference(false);
         }
-
     }
 
     @Override
@@ -566,10 +561,10 @@ public class QueryGraph implements Graph
     }
 
     @Override
-    public EdgeIteratorState getEdgeProps( int origEdgeId, int adjNode )
+    public EdgeIteratorState getEdgeIteratorState( int origEdgeId, int adjNode )
     {
         if (!isVirtualEdge(origEdgeId))
-            return mainGraph.getEdgeProps(origEdgeId, adjNode);
+            return mainGraph.getEdgeIteratorState(origEdgeId, adjNode);
 
         int edgeId = origEdgeId - mainEdges;
         EdgeIteratorState eis = virtualEdges.get(edgeId);

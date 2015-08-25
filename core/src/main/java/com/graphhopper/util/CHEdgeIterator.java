@@ -17,16 +17,14 @@
  */
 package com.graphhopper.util;
 
-import com.graphhopper.storage.LevelGraph;
+import com.graphhopper.storage.CHGraph;
 
 /**
- * Support for skipped edge
- * <p/>
+ * Support for CH edges
+ * <p>
  * @author Peter Karich
- * @see LevelGraph
+ * @see CHGraph
  */
-public interface EdgeSkipExplorer extends EdgeExplorer
+public interface CHEdgeIterator extends EdgeIterator, CHEdgeIteratorState
 {
-    @Override
-    EdgeSkipIterator setBaseNode( int baseNode );
 }
