@@ -85,6 +85,24 @@ class GHNodeAccess implements NodeAccess
     }
 
     @Override
+    public void setElevation(int nodeId, double ele) {
+        if (!is3D())
+            throw new IllegalStateException("Cannot access elevation - 3D is not enabled");
+
+        long tmp = (long) nodeId * that.nodeEntryBytes;
+        double lat = getLatitude(nodeId);
+        double lon = getLongitude(nodeId);
+        that.nodes.setInt(tmp + that.N_ELE, Helper.eleToInt(ele));
+        that.bounds.update(lat, lon, ele);
+
+    }
+
+    @Override
+    public void setEle(int nodeId, double ele) {
+        setElevation(nodeId, ele);
+    }
+
+    @Override
     public final double getElevation( int nodeId )
     {
         if (!elevation)

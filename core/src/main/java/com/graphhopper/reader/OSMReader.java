@@ -381,7 +381,12 @@ public class OSMReader implements DataReader
             SimpleKalmanFilter skf = new SimpleKalmanFilter(tmpElevations, tmpElevations[0], 1, 6, 0.2);
             skf.run();
 
-            double[] result = skf.getEstimatedValues();
+            double[] estimatedElevations = skf.getEstimatedValues();
+
+            for (int i = 0; i < estimatedElevations.length; i++) {
+                int osmNodeId = getNodeMap().get(osmNodeIds.get(i));
+                updateTmpElevation(osmNodeId, Math.round(estimatedElevations[i] * 10) / 10);
+            }
         }
 
 
@@ -453,6 +458,7 @@ public class OSMReader implements DataReader
         for (EdgeIteratorState edge : createdEdges)
         {
             encodingManager.applyWayTags(way, edge);
+            edge.fetchWayGeometry(3);
         }
     }
 
@@ -574,6 +580,26 @@ public class OSMReader implements DataReader
         } else
             // e.g. if id is not handled from preparse (e.g. was ignored via isInBounds)
             return Double.NaN;
+    }
+
+    //TODO update elevation
+
+    boolean updateTmpElevation( int id, double ele ){
+        if (id == EMPTY)
+            return false;
+        if(id < TOWER_NODE){
+            id = -id -3;
+            nodeAccess.setElevation(id, ele);
+            return true;
+        } else if (id > -TOWER_NODE)
+        {
+            // pillar node
+            id = id - 3;
+            pillarInfo.setElevation(id, ele);
+            return true;
+        } else
+            // e.g. if id is not handled from preparse (e.g. was ignored via isInBounds)
+            return false;
     }
 
     private void processNode( OSMNode node )

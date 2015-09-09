@@ -25,6 +25,8 @@ srtmprovider/
 core/docs/
 .*#
 cgiarprovider/
+srtm/
+srtm1degV3/
 /nbactions.xml
 tools/nb-configuration.xml
 android/build/

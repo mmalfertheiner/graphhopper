@@ -548,6 +548,16 @@ public class QueryGraph implements Graph
         }
 
         @Override
+        public void setElevation(int nodeId, double ele) {
+
+        }
+
+        @Override
+        public void setEle(int nodeId, double ele) {
+
+        }
+
+        @Override
         public double getEle( int nodeId )
         {
             return getElevation(nodeId);

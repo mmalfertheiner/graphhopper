@@ -69,6 +69,14 @@ public interface PointAccess
 
     double getLon( int nodeId );
 
+
+    /**
+     * Set elevation of a specified node index
+     */
+    void setElevation( int nodeId, double ele );
+
+    void setEle( int nodeId, double ele );
+
     /**
      * Returns the elevation of the specified nodeId.
      */

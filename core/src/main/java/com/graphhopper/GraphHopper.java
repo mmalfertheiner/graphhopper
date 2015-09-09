@@ -19,10 +19,7 @@ package com.graphhopper;
 
 import com.graphhopper.reader.DataReader;
 import com.graphhopper.reader.OSMReader;
-import com.graphhopper.reader.dem.CGIARProvider;
-import com.graphhopper.reader.dem.ElevationProvider;
-import com.graphhopper.reader.dem.LowPrecisionSRTMProvider;
-import com.graphhopper.reader.dem.SRTMProvider;
+import com.graphhopper.reader.dem.*;
 import com.graphhopper.routing.*;
 import com.graphhopper.routing.ch.PrepareContractionHierarchies;
 import com.graphhopper.routing.util.*;
@@ -551,6 +548,9 @@ public class GraphHopper implements GraphHopperAPI
             CGIARProvider cgiarProvider = new CGIARProvider();
             cgiarProvider.setAutoRemoveTemporaryFiles(args.getBool("graph.elevation.cgiar.clear", true));
             tmpProvider = cgiarProvider;
+        } else if (eleProviderStr.equalsIgnoreCase("srtm1degV3")){
+            System.out.println("Using high precision srtm v3");
+            tmpProvider = new HighPrecisionSRTMProvider();
         }
 
         tmpProvider.setCalcMean(eleCalcMean);

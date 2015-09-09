@@ -113,6 +113,20 @@ public class PillarInfo implements PointAccess
     }
 
     @Override
+    public void setElevation(int nodeId, double ele) {
+        if (!is3D())
+            return;
+
+        long tmp = (long) nodeId * rowSizeInBytes;
+        da.setInt(tmp + ELE, Helper.eleToInt(ele));
+    }
+
+    @Override
+    public void setEle(int nodeId, double ele) {
+        setElevation(nodeId, ele);
+    }
+
+    @Override
     public double getElevation( int id )
     {
         if (!is3D())

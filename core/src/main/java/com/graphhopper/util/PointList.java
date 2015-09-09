@@ -202,6 +202,19 @@ public class PointList implements Iterable<GHPoint3D>, PointAccess
     }
 
     @Override
+    public void setElevation(int nodeId, double ele) {
+        if(!is3D())
+            throw new IllegalStateException("This is a 2D list we cannot store elevation: " + ele);
+
+        elevations[nodeId] = ele;
+    }
+
+    @Override
+    public void setEle(int nodeId, double ele) {
+        setElevation(nodeId, ele);
+    }
+
+    @Override
     public double getLongitude( int index )
     {
         if (index >= size)
