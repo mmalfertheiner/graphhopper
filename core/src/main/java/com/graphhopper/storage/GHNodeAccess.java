@@ -22,15 +22,15 @@ import com.graphhopper.util.Helper;
 
 /**
  * A helper class for GraphHopperStorage for its node access.
- * <p/>
+ * <p>
  * @author Peter Karich
  */
 class GHNodeAccess implements NodeAccess
 {
-    private final GraphHopperStorage that;
+    private final BaseGraph that;
     private final boolean elevation;
 
-    public GHNodeAccess( GraphHopperStorage that, boolean withElevation )
+    public GHNodeAccess( BaseGraph that, boolean withElevation )
     {
         this.that = that;
         this.elevation = withElevation;

@@ -8,7 +8,7 @@ import com.graphhopper.util.Helper;
 /**
  * Approximates the distance to the goal node by weighting the beeline distance according to the
  * distance weighting
- * <p/>
+ * <p>
  * @author jansoe
  */
 public class BeelineWeightApproximator implements WeightApproximator
@@ -17,6 +17,7 @@ public class BeelineWeightApproximator implements WeightApproximator
     private final Weighting weighting;
     private DistanceCalc distanceCalc = Helper.DIST_EARTH;
     private double toLat, toLon;
+    private double epsilon = 1;
 
     public BeelineWeightApproximator( NodeAccess nodeAccess, Weighting weighting )
     {
@@ -31,10 +32,16 @@ public class BeelineWeightApproximator implements WeightApproximator
         toLon = nodeAccess.getLongitude(toNode);
     }
 
+    public WeightApproximator setEpsilon( double epsilon )
+    {
+        this.epsilon = epsilon;
+        return this;
+    }
+
     @Override
     public WeightApproximator duplicate()
     {
-        return new BeelineWeightApproximator(nodeAccess, weighting).setDistanceCalc(distanceCalc);
+        return new BeelineWeightApproximator(nodeAccess, weighting).setDistanceCalc(distanceCalc).setEpsilon(epsilon);
     }
 
     @Override
@@ -44,7 +51,7 @@ public class BeelineWeightApproximator implements WeightApproximator
         double fromLon = nodeAccess.getLongitude(fromNode);
         double dist2goal = distanceCalc.calcDist(toLat, toLon, fromLat, fromLon);
         double weight2goal = weighting.getMinWeight(dist2goal);
-        return weight2goal;
+        return weight2goal * epsilon;
     }
 
     public BeelineWeightApproximator setDistanceCalc( DistanceCalc distanceCalc )

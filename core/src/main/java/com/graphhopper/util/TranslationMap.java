@@ -24,16 +24,17 @@ import java.util.Map.Entry;
 /**
  * A class which manages the translations in-memory. See here for more information:
  * ./docs/core/translations.md
- * <p/>
+ * <p>
  * @author Peter Karich
  */
 public class TranslationMap
 {
     // ISO codes (639-1), use 'en_US' as reference
-    private static final List<String> LOCALES = Arrays.asList("ar", "bg", "ca", "cz", "de_DE", "el",
-            "en_US", "es", "fa", "fil", "fi", "fr", "gl", "he", "hsb", "hu_HU", "it", "ja",
-            "lt_LT", "ne", "nl", "pl_PL", "pt_BR", "pt_PT", "ro", "ru", "si", "sk",
-            "sv_SE", "tr", "uk", "vi_VI", "zh_CN");
+    private static final List<String> LOCALES = Arrays.asList("ar", "ast", "bg", "ca",
+            "cs_CZ", "da_DK", "de_DE", "el", "en_US", "es", "fa", "fil", "fi", "fr",
+            "gl", "he", "hsb", "hu_HU", "it", "ja", "lt_LT", "ne", "nl", "pl_PL",
+            "pt_BR", "pt_PT", "ro", "ru", "si", "sk", "sv_SE", "tr", "uk",
+            "vi_VI", "zh_CN");
     private final Map<String, Translation> translations = new HashMap<String, Translation>();
 
     /**

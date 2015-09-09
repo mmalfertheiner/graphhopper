@@ -15,15 +15,16 @@
  */
 package com.graphhopper.routing;
 
+import com.graphhopper.routing.util.FlagEncoder;
 import com.graphhopper.util.*;
 
 /**
  * Creates an edge state decoupled from a graph where nodes, pointList, etc are kept in memory.
- * <p/>
+ * <p>
  * Note, this class is not suited for public use and can change with minor releases unexpectedly or
  * even gets removed.
  */
-public class VirtualEdgeIteratorState implements EdgeIteratorState, EdgeSkipIterState
+public class VirtualEdgeIteratorState implements EdgeIteratorState, CHEdgeIteratorState
 {
     private final PointList pointList;
     private final int edgeId;
@@ -34,9 +35,7 @@ public class VirtualEdgeIteratorState implements EdgeIteratorState, EdgeSkipIter
     private final int adjNode;
     private final int originalTraversalKey;
     // indication if edges are dispreferred as start/stop edge 
-    private boolean unfavoredReverseEdge;
     private boolean unfavored;
-
 
     public VirtualEdgeIteratorState( int originalTraversalKey, int edgeId, int baseNode, int adjNode, double distance, long flags, String name, PointList pointList )
     {
@@ -53,7 +52,7 @@ public class VirtualEdgeIteratorState implements EdgeIteratorState, EdgeSkipIter
     /**
      * This method returns the original edge via its traversal key. I.e. also the direction is
      * already correctly encoded.
-     * <p/>
+     * <p>
      * @see GHUtility#createEdgeKey(int, int, int, boolean)
      */
     public int getOriginalTraversalKey()
@@ -144,33 +143,25 @@ public class VirtualEdgeIteratorState implements EdgeIteratorState, EdgeSkipIter
         this.name = name;
         return this;
     }
-    
+
     @Override
-    public boolean getBoolean(int key, boolean reverse, boolean _default )
+    public boolean getBoolean( int key, boolean reverse, boolean _default )
     {
         if (key == EdgeIteratorState.K_UNFAVORED_EDGE)
-        {
-            if (reverse)
-                return unfavoredReverseEdge;
-            else
-                return unfavored;
-        }
+            return unfavored;
+
         // for non-existent keys return default
         return _default;
     }
 
     /**
-     * set edge to unfavored status for routing from/to start/stop points
-     * @param reverse indicates if forward or backward direction is affected
+     * This method sets edge to unfavored status for routing from or to the start/stop points.
      */
-    public void setVirtualEdgePreference( boolean unfavored, boolean reverse )
+    public void setVirtualEdgePreference( boolean unfavored )
     {
-        if (reverse)
-              unfavoredReverseEdge = unfavored;
-        else
-            this.unfavored = unfavored;
+        this.unfavored = unfavored;
     }
-    
+
     @Override
     public String toString()
     {
@@ -184,7 +175,25 @@ public class VirtualEdgeIteratorState implements EdgeIteratorState, EdgeSkipIter
     }
 
     @Override
+    public boolean isForward( FlagEncoder encoder )
+    {
+        return encoder.isForward(getFlags());
+    }
+
+    @Override
+    public boolean isBackward( FlagEncoder encoder )
+    {
+        return encoder.isBackward(getFlags());
+    }
+
+    @Override
     public int getAdditionalField()
+    {
+        throw new UnsupportedOperationException("Not supported.");
+    }
+
+    @Override
+    public boolean canBeOverwritten( long flags )
     {
         throw new UnsupportedOperationException("Not supported.");
     }
@@ -226,7 +235,7 @@ public class VirtualEdgeIteratorState implements EdgeIteratorState, EdgeSkipIter
     }
 
     @Override
-    public EdgeSkipIterState setWeight( double weight )
+    public CHEdgeIteratorState setWeight( double weight )
     {
         throw new UnsupportedOperationException("Not supported.");
     }

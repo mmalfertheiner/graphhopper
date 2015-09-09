@@ -19,16 +19,15 @@
 package com.graphhopper.routing.ch;
 
 /**
- * The flags are stored differently for shortcuts: just a weight and the direction flags. Currently
- * it is not allowed to store multiple vehicles.
- * <p/>
+ * The flags are stored differently for shortcuts: just one weight and the direction flags.
+ * <p>
  * @author Peter Karich
  */
 public class PrepareEncoder
 {
-    // shortcut is one direction, speed is only involved while recalculating the adjNode weights
-    // see PrepareContractionHierarchies.prepareEdges
+    // shortcut goes in one or both directions is also possible if weight is identical    
     private static final long scFwdDir = 0x1;
+    private static final long scBwdDir = 0x2;
     private static final long scDirMask = 0x3;
 
     public static final long getScDirMask()
@@ -41,10 +40,15 @@ public class PrepareEncoder
         return scFwdDir;
     }
 
+    public static final long getScBwdDir()
+    {
+        return scBwdDir;
+    }
+
     /**
      * Returns true if flags1 can be overwritten in the edge by flags2 without restricting or
      * changing the directions of flags1.
-     * <p/>
+     * <p>
      * @return true if flags2 is enabled in both directions or if both flags are pointing into the
      * same direction.
      */

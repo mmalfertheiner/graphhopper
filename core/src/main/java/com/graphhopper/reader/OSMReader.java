@@ -55,24 +55,24 @@ import java.util.*;
 /**
  * This class parses an OSM xml or pbf file and creates a graph from it. It does so in a two phase
  * parsing processes in order to reduce memory usage compared to a single parsing processing.
- * <p/>
+ * <p>
  * 1. a) Reads ways from OSM file and stores all associated node ids in osmNodeIdToIndexMap. If a
  * node occurs once it is a pillar node and if more it is a tower node, otherwise
  * osmNodeIdToIndexMap returns EMPTY.
- * <p/>
+ * <p>
  * 1. b) Reads relations from OSM file. In case that the relation is a route relation, it stores
  * specific relation attributes required for routing into osmWayIdToRouteWeigthMap for all the ways
  * of the relation.
- * <p/>
+ * <p>
  * 2.a) Reads nodes from OSM file and stores lat+lon information either into the intermediate
  * datastructure for the pillar nodes (pillarLats/pillarLons) or, if a tower node, directly into the
  * graphStorage via setLatitude/setLongitude. It can also happen that a pillar node needs to be
  * transformed into a tower node e.g. via barriers or different speed values for one way.
- * <p/>
+ * <p>
  * 2.b) Reads ways OSM file and creates edges while calculating the speed etc from the OSM tags.
  * When creating an edge the pillar node information from the intermediate datastructure will be
  * stored in the way geometry of that edge.
- * <p/>
+ * <p>
  * @author Peter Karich
  */
 public class OSMReader implements DataReader
@@ -85,7 +85,8 @@ public class OSMReader implements DataReader
     private static final Logger logger = LoggerFactory.getLogger(OSMReader.class);
     private long locations;
     private long skippedLocations;
-    private final GraphStorage graphStorage;
+    private final GraphStorage ghStorage;
+    private final Graph graph;
     private final NodeAccess nodeAccess;
     private EncodingManager encodingManager = null;
     private int workerThreads = -1;
@@ -116,20 +117,21 @@ public class OSMReader implements DataReader
     // negative but increasing to avoid clash with custom created OSM files
     private long newUniqueOsmId = -Long.MAX_VALUE;
     private ElevationProvider eleProvider = ElevationProvider.NOOP;
-    private boolean exitOnlyPillarNodeException = true;
+    private final boolean exitOnlyPillarNodeException = true;
     private File osmFile;
-    private Map<FlagEncoder, EdgeExplorer> outExplorerMap = new HashMap<FlagEncoder, EdgeExplorer>();
-    private Map<FlagEncoder, EdgeExplorer> inExplorerMap = new HashMap<FlagEncoder, EdgeExplorer>();
+    private final Map<FlagEncoder, EdgeExplorer> outExplorerMap = new HashMap<FlagEncoder, EdgeExplorer>();
+    private final Map<FlagEncoder, EdgeExplorer> inExplorerMap = new HashMap<FlagEncoder, EdgeExplorer>();
 
-    public OSMReader( GraphStorage storage )
+    public OSMReader( GraphHopperStorage ghStorage )
     {
-        this.graphStorage = storage;
-        this.nodeAccess = graphStorage.getNodeAccess();
+        this.ghStorage = ghStorage;
+        this.graph = ghStorage;
+        this.nodeAccess = graph.getNodeAccess();
 
         osmNodeIdToInternalNodeMap = new GHLongIntBTree(200);
         osmNodeIdToNodeFlagsMap = new TLongLongHashMap(200, .5f, 0, 0);
         osmWayIdToRouteWeightMap = new TLongLongHashMap(200, .5f, 0, 0);
-        pillarInfo = new PillarInfo(nodeAccess.is3D(), graphStorage.getDirectory());
+        pillarInfo = new PillarInfo(nodeAccess.is3D(), ghStorage.getDirectory());
     }
 
     @Override
@@ -247,7 +249,7 @@ public class OSMReader implements DataReader
     /**
      * Filter ways but do not analyze properties wayNodes will be filled with participating node
      * ids.
-     * <p/>
+     * <p>
      * @return true the current xml entry is a way entry and has nodes
      */
     boolean filterWay( OSMWay item )
@@ -270,7 +272,7 @@ public class OSMReader implements DataReader
     {
         int tmp = (int) Math.max(getNodeMap().getSize() / 50, 100);
         logger.info("creating graph. Found nodes (pillar+tower):" + nf(getNodeMap().getSize()) + ", " + Helper.getMemInfo());
-        graphStorage.create(tmp);
+        ghStorage.create(tmp);
         long wayStart = -1;
         long relationStart = -1;
         long counter = 1;
@@ -325,7 +327,7 @@ public class OSMReader implements DataReader
         }
 
         finishedReading();
-        if (graphStorage.getNodes() == 0)
+        if (graph.getNodes() == 0)
             throw new IllegalStateException("osm must not be empty. read " + counter + " lines and " + locations + " locations");
     }
 
@@ -444,7 +446,7 @@ public class OSMReader implements DataReader
             OSMTurnRelation turnRelation = createTurnRelation(relation);
             if (turnRelation != null)
             {
-                GraphExtension extendedStorage = graphStorage.getExtension();
+                GraphExtension extendedStorage = graph.getExtension();
                 if (extendedStorage instanceof TurnCostExtension)
                 {
                     TurnCostExtension tcs = (TurnCostExtension) extendedStorage;
@@ -491,10 +493,10 @@ public class OSMReader implements DataReader
 
         if (edgeOutExplorer == null || edgeInExplorer == null)
         {
-            edgeOutExplorer = getGraphStorage().createEdgeExplorer(new DefaultEdgeFilter(encoder, false, true));
+            edgeOutExplorer = graph.createEdgeExplorer(new DefaultEdgeFilter(encoder, false, true));
             outExplorerMap.put(encoder, edgeOutExplorer);
 
-            edgeInExplorer = getGraphStorage().createEdgeExplorer(new DefaultEdgeFilter(encoder, true, false));
+            edgeInExplorer = graph.createEdgeExplorer(new DefaultEdgeFilter(encoder, true, false));
             inExplorerMap.put(encoder, edgeInExplorer);
         }
         return turnRelation.getRestrictionAsEntries(encoder, edgeOutExplorer, edgeInExplorer, this);
@@ -793,7 +795,8 @@ public class OSMReader implements DataReader
             towerNodeDistance = 1;
         }
 
-        EdgeIteratorState iter = graphStorage.edge(fromIndex, toIndex).setDistance(towerNodeDistance).setFlags(flags);
+        EdgeIteratorState iter = graph.edge(fromIndex, toIndex).setDistance(towerNodeDistance).setFlags(flags);
+
         if (nodes > 2)
         {
             if (doSimplify)
@@ -901,7 +904,7 @@ public class OSMReader implements DataReader
 
     /**
      * Creates an OSM turn relation out of an unspecified OSM relation
-     * <p/>
+     * <p>
      * @return the OSM turn relation, <code>null</code>, if unsupported turn relation
      */
     OSMTurnRelation createTurnRelation( OSMRelation relation )
@@ -1005,7 +1008,7 @@ public class OSMReader implements DataReader
 
     private void printInfo( String str )
     {
-        logger.info("finished " + str + " processing." + " nodes: " + graphStorage.getNodes()
+        logger.info("finished " + str + " processing." + " nodes: " + graph.getNodes()
                 + ", osmIdMap.size:" + getNodeMap().getSize() + ", osmIdMap:" + getNodeMap().getMemoryUsage() + "MB"
                 + ", nodeFlagsMap.size:" + getNodeFlagsMap().size() + ", relFlagsMap.size:" + getRelFlagsMap().size()
                 + ", zeroCounter:" + zeroCounter
@@ -1016,10 +1019,5 @@ public class OSMReader implements DataReader
     public String toString()
     {
         return getClass().getSimpleName();
-    }
-
-    public GraphStorage getGraphStorage()
-    {
-        return graphStorage;
     }
 }

@@ -31,7 +31,7 @@ import java.util.*;
  * Abstract class which handles flag decoding and encoding. Every encoder should be registered to a
  * EncodingManager to be usable. If you want the full long to be stored you need to enable this in
  * the GraphHopperStorage.
- * <p/>
+ * <p>
  * @author Peter Karich
  * @author Nop
  * @see EncodingManager
@@ -81,6 +81,7 @@ public abstract class AbstractFlagEncoder implements FlagEncoder, TurnCostEncode
     private boolean blockFords = true;
     protected final int speedBits;
     protected final double speedFactor;
+    private boolean registered;
 
     public AbstractFlagEncoder( PMap properties )
     {
@@ -114,6 +115,7 @@ public abstract class AbstractFlagEncoder implements FlagEncoder, TurnCostEncode
 
         acceptedRailways.add("tram");
         acceptedRailways.add("abandoned");
+        acceptedRailways.add("abandoned_tram");        
         acceptedRailways.add("disused");
 
         // http://wiki.openstreetmap.org/wiki/Demolished_Railway
@@ -121,6 +123,17 @@ public abstract class AbstractFlagEncoder implements FlagEncoder, TurnCostEncode
         acceptedRailways.add("razed");
         acceptedRailways.add("historic");
         acceptedRailways.add("obliterated");
+    }
+
+    public void setRegistered( boolean registered )
+    {
+        this.registered = registered;
+    }
+
+    @Override
+    public boolean isRegistered()
+    {
+        return registered;
     }
 
     /**
@@ -143,7 +156,7 @@ public abstract class AbstractFlagEncoder implements FlagEncoder, TurnCostEncode
 
     /**
      * Defines the bits for the node flags, which are currently used for barriers only.
-     * <p/>
+     * <p>
      * @return incremented shift value pointing behind the last used bit
      */
     public int defineNodeBits( int index, int shift )
@@ -153,15 +166,17 @@ public abstract class AbstractFlagEncoder implements FlagEncoder, TurnCostEncode
 
     /**
      * Defines bits used for edge flags used for access, speed etc.
-     * <p/>
+     * <p>
      * @param shift bit offset for the first bit used by this encoder
      * @return incremented shift value pointing behind the last used bit
      */
     public int defineWayBits( int index, int shift )
     {
-        if (forwardBit != 0)
+        if (isRegistered())
             throw new IllegalStateException("You must not register a FlagEncoder (" + toString() + ") twice!");
 
+        setRegistered(true);
+        
         // define the first 2 speedBits in flags for routing
         forwardBit = 1L << shift;
         backwardBit = 2L << shift;
@@ -180,7 +195,7 @@ public abstract class AbstractFlagEncoder implements FlagEncoder, TurnCostEncode
 
     /**
      * Defines the bits which are used for relation flags.
-     * <p/>
+     * <p>
      * @return incremented shift value pointing behind the last used bit
      */
     public int defineRelationBits( int index, int shift )
@@ -191,14 +206,14 @@ public abstract class AbstractFlagEncoder implements FlagEncoder, TurnCostEncode
     /**
      * Analyze the properties of a relation and create the routing flags for the second read step.
      * In the pre-parsing step this method will be called to determine the useful relation tags.
-     * <p/>
+     * <p>
      */
     public abstract long handleRelationTags( OSMRelation relation, long oldRelationFlags );
 
     /**
      * Decide whether a way is routable for a given mode of travel. This skips some ways before
      * handleWayTags is called.
-     * <p/>
+     * <p>
      * @return the encoded value to indicate if this encoder allows travel or not.
      */
     public abstract long acceptWay( OSMWay way );
@@ -449,7 +464,7 @@ public abstract class AbstractFlagEncoder implements FlagEncoder, TurnCostEncode
     /**
      * This method parses a string ala "00:00" (hours and minutes) or "0:00:00" (days, hours and
      * minutes).
-     * <p/>
+     * <p>
      * @return duration value in minutes
      */
     protected static int parseDuration( String str )
@@ -578,7 +593,7 @@ public abstract class AbstractFlagEncoder implements FlagEncoder, TurnCostEncode
 
     /**
      * Defines the bits reserved for storing turn restriction and turn cost
-     * <p/>
+     * <p>
      * @param shift bit offset for the first bit used by this encoder
      * @return incremented shift value pointing behind the last used bit
      */

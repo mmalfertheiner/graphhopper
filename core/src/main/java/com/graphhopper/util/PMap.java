@@ -22,7 +22,7 @@ import java.util.Map;
 
 /**
  * A properties map with convenient accessors
- * <p/>
+ * <p>
  * @author Peter Karich
  */
 public class PMap
@@ -58,6 +58,12 @@ public class PMap
 
             this.map.put(s.substring(0, index).toLowerCase(), s.substring(index + 1));
         }
+    }
+
+    public PMap put( PMap map )
+    {
+        this.map.putAll(map.map);
+        return this;
     }
 
     public PMap put( String key, Object str )
@@ -157,6 +163,14 @@ public class PMap
             return "";
         }
         return val;
+    }
+
+    /**
+     * This method copies the underlying structur into a new Map object
+     */
+    public Map<String, String> toMap()
+    {
+        return new HashMap<String, String>(map);
     }
 
     private Map<String, String> getMap()
