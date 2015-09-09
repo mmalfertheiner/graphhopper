@@ -368,6 +368,23 @@ public class OSMReader implements DataReader
             }
         }
 
+        //Kalman filter improves quality of elevation data
+        if(osmNodeIds.size() > 3) {
+
+            double[] tmpElevations = new double[osmNodeIds.size()];
+
+            for (int i = 0; i < tmpElevations.length; i++) {
+                int osmNodeId = getNodeMap().get(osmNodeIds.get(i));
+                tmpElevations[i] = getElevation(osmNodeId);
+            }
+
+            SimpleKalmanFilter skf = new SimpleKalmanFilter(tmpElevations, tmpElevations[0], 1, 6, 0.2);
+            skf.run();
+
+            double[] result = skf.getEstimatedValues();
+        }
+
+
         long wayFlags = encodingManager.handleWayTags(way, includeWay, relationFlags);
         if (wayFlags == 0)
             return;
@@ -580,6 +597,8 @@ public class OSMReader implements DataReader
         }
     }
 
+    //TODO update node elevation with Kalman
+
     boolean addNode( OSMNode node )
     {
         int nodeType = getNodeMap().get(node.getId());
@@ -604,6 +623,13 @@ public class OSMReader implements DataReader
     protected double getElevation( OSMNode node )
     {
         return eleProvider.getEle(node.getLat(), node.getLon());
+    }
+
+    protected double getElevation( int osmNodeId ){
+        double lat = getTmpLatitude(osmNodeId);
+        double lon = getTmpLongitude(osmNodeId);
+
+        return eleProvider.getEle(lat, lon);
     }
 
     void prepareWaysWithRelationInfo( OSMRelation osmRelation )
