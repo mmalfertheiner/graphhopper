@@ -117,7 +117,7 @@ paths[0].instructions[0].turn_angle           | [optional] Only available for US
         "time": 0
       }
     ],
-    "points": "oxg_Iy|ppAl@wCdE}LfFsN|@_Ej@eEtAaMh@sGVuDNcDb@{PFyGdAi]FoC?q@sXQ_@?",
+    "points": "oxg_Iy|ppAl@wCdE}LfFsN|@_Ej@eEtAaMh@sGVuDNcDb@{PFyGdAi]FoC?processNoise@sXQ_@?",
     "points_encoded": true,
     "time": 129290
   }]

@@ -296,7 +296,7 @@ elif [ "$ACTION" = "measurement" ]; then
  current_commit=$(git log -n 1 --pretty=oneline | cut -d' ' -f1)
  commits=$(git rev-list HEAD -n $last_commits)
  for commit in $commits; do
-   git checkout $commit -q
+   git checkout $commit -processNoise
    M_FILE_NAME=$(git log -n 1 --pretty=oneline | grep -o "\ .*" |  tr " ,;" "_")
    M_FILE_NAME="measurement$M_FILE_NAME.properties"
    echo -e "\nusing commit $commit and $M_FILE_NAME"

@@ -11,52 +11,75 @@ import java.util.Arrays;
 
 public class SimpleKalmanFilter {
 
-    private double[] z; //Array with original values
-    private double[] x; //Array with estimated values
-    private double[] p; //Array with error covariance
+    private double[] originalMeasurements; //Array with original values
+    private double[] estimates; //Array with estimated values
+    private double[] error; //Array with error covariance
 
     private double r;   //Environment noise
-    private double q;
+    private Double q;
+
+    private double[] processNoise;
+    private int processNoiseScalingFactor;
 
     public SimpleKalmanFilter(double[] measurement, double x0, double p0, double eNoise, double q) {
 
-        z = measurement;
-        x = new double[measurement.length + 1]; //because we have a prior
-        p = new double[measurement.length + 1];
+        originalMeasurements = measurement;
+        estimates = new double[measurement.length + 1]; //because we have a prior
+        error = new double[measurement.length + 1];
 
-        x[0] = x0;
-        p[0] = p0;
+        estimates[0] = x0;
+        error[0] = p0;
 
         r = eNoise;
         this.q = q;
 
     }
 
+    public SimpleKalmanFilter(double[] measurement, double x0, double p0, double eNoise, double[] processNoise, int processNoiseScalingFactor) {
+        originalMeasurements = measurement;
+        estimates = new double[measurement.length + 1]; //because we have a prior
+        error = new double[measurement.length + 1];
+
+        estimates[0] = x0;
+        error[0] = p0;
+
+        r = eNoise;
+        this.processNoise = processNoise;
+        this.processNoiseScalingFactor = processNoiseScalingFactor;
+    }
+
+    private double getQ(int index){
+        if(q != null)
+            return q;
+
+        return processNoise[index] / processNoiseScalingFactor;
+    }
+
     public void run(){
 
-        for(int i = 0; i < z.length; i++){
+        for(int i = 0; i < originalMeasurements.length; i++){
 
             // Time update
-            double xPrior = 1 * x[i];
-            double pPrior = p[i] + q;
+            double xPrior = 1 * estimates[i];
+            double pPrior = error[i] + getQ(i);
 
             // Measurement update
             double kalmanGain = pPrior / (pPrior + r);
 
-            double estimate = xPrior + kalmanGain * (z[i] - xPrior);
-            x[i+1] = estimate;
+            double estimate = xPrior + kalmanGain * (originalMeasurements[i] - xPrior);
+            estimates[i+1] = estimate;
 
             double error = (1 - kalmanGain) * pPrior;
-            p[i+1] = error;
+            this.error[i+1] = error;
         }
 
     }
 
     public double[] getEstimatedValues(){
 
-        if(x != null){
+        if(estimates != null){
 
-            return Arrays.copyOfRange(x, 1, x.length);
+            return Arrays.copyOfRange(estimates, 1, estimates.length);
 
         }
 

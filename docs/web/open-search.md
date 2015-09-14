@@ -11,6 +11,6 @@ Add GraphHopper Maps to your Browser
 
 ## Chrome
 
-1. Open your settings in chrome and go to 'search' to add a new search engine. Use the URL `http://graphhopper.com/maps/?q=%s`
+1. Open your settings in chrome and go to 'search' to add a new search engine. Use the URL `http://graphhopper.com/maps/?processNoise=%s`
 2. Finally search via GraphHopper Maps: type 'gh ' and then put 'p:' before your locations.
 ![chrome](http://karussell.files.wordpress.com/2013/08/chrome.png)

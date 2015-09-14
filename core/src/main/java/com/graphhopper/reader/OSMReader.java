@@ -372,13 +372,30 @@ public class OSMReader implements DataReader
         if(osmNodeIds.size() > 3) {
 
             double[] tmpElevations = new double[osmNodeIds.size()];
+            double[] tmpDistances = new double[osmNodeIds.size()];
 
             for (int i = 0; i < tmpElevations.length; i++) {
                 int osmNodeId = getNodeMap().get(osmNodeIds.get(i));
                 tmpElevations[i] = getElevation(osmNodeId);
+
+                if( i > 0) {
+                    int first = getNodeMap().get(osmNodeIds.get(i-1));
+                    int last = getNodeMap().get(osmNodeIds.get(i));
+                    double firstLat = getTmpLatitude(first), firstLon = getTmpLongitude(first);
+                    double lastLat = getTmpLatitude(last), lastLon = getTmpLongitude(last);
+
+                    if (!Double.isNaN(firstLat) && !Double.isNaN(firstLon) && !Double.isNaN(lastLat) && !Double.isNaN(lastLon))
+                    {
+                        double estimatedDist = distCalc.calcDist(firstLat, firstLon, lastLat, lastLon);
+                        tmpDistances[i] = estimatedDist;
+                    }
+
+                } else {
+                    tmpDistances[i] = 0.0;
+                }
             }
 
-            SimpleKalmanFilter skf = new SimpleKalmanFilter(tmpElevations, tmpElevations[0], 1, 6, 0.2);
+            SimpleKalmanFilter skf = new SimpleKalmanFilter(tmpElevations, tmpElevations[0], 1, 6, tmpDistances, 20);
             skf.run();
 
             double[] estimatedElevations = skf.getEstimatedValues();
