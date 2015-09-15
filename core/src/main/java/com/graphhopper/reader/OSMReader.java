@@ -19,6 +19,7 @@ package com.graphhopper.reader;
 
 import static com.graphhopper.util.Helper.nf;
 
+import com.graphhopper.util.SimpleKalmanFilter;
 import gnu.trove.list.TLongList;
 import gnu.trove.list.array.TLongArrayList;
 import gnu.trove.map.TIntLongMap;
@@ -396,9 +397,7 @@ public class OSMReader implements DataReader
             }
 
             SimpleKalmanFilter skf = new SimpleKalmanFilter(tmpElevations, tmpElevations[0], 1, 6, tmpDistances, 20);
-            skf.run();
-
-            double[] estimatedElevations = skf.getEstimatedValues();
+            double[] estimatedElevations = skf.smooth();
 
             for (int i = 0; i < estimatedElevations.length; i++) {
                 int osmNodeId = getNodeMap().get(osmNodeIds.get(i));
