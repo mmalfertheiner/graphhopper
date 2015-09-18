@@ -369,8 +369,8 @@ public class OSMReader implements DataReader
                 way.setTag("estimated_center", new GHPoint((firstLat + lastLat) / 2, (firstLon + lastLon) / 2));
             }
 
-            //Kalman filter improves quality of elevation data
-            if(osmNodeIds.size() > 3 && estimatedDist > 100) {
+            //Kalman filter improves quality of elevation data - check for Kalman
+            if(true) {
 
                 double[] tmpElevations = new double[osmNodeIds.size()];
                 double[] tmpDistances = new double[osmNodeIds.size()-1];
@@ -394,13 +394,16 @@ public class OSMReader implements DataReader
                     }
                 }
 
-                SimpleKalmanFilter filter = new SimpleKalmanFilter(tmpElevations, tmpElevations[0], 1, 6, tmpDistances, 20);
+                SimpleKalmanFilter filter1 = new SimpleKalmanFilter(SimpleKalmanFilter.FORWARD, tmpElevations, 6, tmpDistances, 40);
+                SimpleKalmanFilter filter2 = new SimpleKalmanFilter(SimpleKalmanFilter.BACKWARD, tmpElevations, 6, tmpDistances, 40);
                 //MeanFilter filter = new MeanFilter(tmpElevations, tmpDistances, 60);
-                double[] estimatedElevations = filter.smooth();
+                double[] estimatedElevations1 = filter1.smooth();
+                double[] estimatedElevations2 = filter2.smooth();
 
-                for (int i = 0; i < estimatedElevations.length; i++) {
+
+                for (int i = 0; i < estimatedElevations1.length; i++) {
                     osmNodeId = getNodeMap().get(osmNodeIds.get(i));
-                    updateTmpElevation(osmNodeId, Math.round(estimatedElevations[i] * 10) / 10);
+                    updateTmpElevation(osmNodeId, (estimatedElevations1[i] + estimatedElevations2[i]) / 2);
                 }
             }
         }
