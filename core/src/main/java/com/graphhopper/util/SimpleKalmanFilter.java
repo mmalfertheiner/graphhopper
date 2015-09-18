@@ -52,6 +52,13 @@ public class SimpleKalmanFilter implements SmoothingFilter{
         if(q != null)
             return q;
 
+        int missingProcessNoise = originalMeasurements.length - processNoise.length;
+
+        if(missingProcessNoise > 0 && index < missingProcessNoise)
+            return 0;
+        else if (missingProcessNoise > 0)
+            return processNoise[index - missingProcessNoise] / processNoiseScalingFactor;
+
         return processNoise[index] / processNoiseScalingFactor;
     }
 

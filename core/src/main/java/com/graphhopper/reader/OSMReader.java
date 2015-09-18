@@ -361,50 +361,49 @@ public class OSMReader implements DataReader
             int last = getNodeMap().get(osmNodeIds.get(osmNodeIds.size() - 1));
             double firstLat = getTmpLatitude(first), firstLon = getTmpLongitude(first);
             double lastLat = getTmpLatitude(last), lastLon = getTmpLongitude(last);
+            double estimatedDist = 0;
             if (!Double.isNaN(firstLat) && !Double.isNaN(firstLon) && !Double.isNaN(lastLat) && !Double.isNaN(lastLon))
             {
-                double estimatedDist = distCalc.calcDist(firstLat, firstLon, lastLat, lastLon);
+                estimatedDist = distCalc.calcDist(firstLat, firstLon, lastLat, lastLon);
                 way.setTag("estimated_distance", estimatedDist);
                 way.setTag("estimated_center", new GHPoint((firstLat + lastLat) / 2, (firstLon + lastLon) / 2));
             }
-        }
 
-        //Kalman filter improves quality of elevation data
-        if(osmNodeIds.size() > 3) {
+            //Kalman filter improves quality of elevation data
+            if(osmNodeIds.size() > 3 && estimatedDist > 100) {
 
-            double[] tmpElevations = new double[osmNodeIds.size()];
-            double[] tmpDistances = new double[osmNodeIds.size()];
+                double[] tmpElevations = new double[osmNodeIds.size()];
+                double[] tmpDistances = new double[osmNodeIds.size()-1];
 
-            for (int i = 0; i < tmpElevations.length; i++) {
-                int osmNodeId = getNodeMap().get(osmNodeIds.get(i));
-                tmpElevations[i] = getElevation(osmNodeId);
+                int osmNodeId = getNodeMap().get(osmNodeIds.get(0));
+                tmpElevations[0] = getTmpElevation(osmNodeId);
 
-                if( i > 0) {
-                    int first = getNodeMap().get(osmNodeIds.get(i-1));
-                    int last = getNodeMap().get(osmNodeIds.get(i));
-                    double firstLat = getTmpLatitude(first), firstLon = getTmpLongitude(first);
-                    double lastLat = getTmpLatitude(last), lastLon = getTmpLongitude(last);
+                for (int i = 1; i < tmpElevations.length; i++) {
+                    osmNodeId = getNodeMap().get(osmNodeIds.get(i));
+                    tmpElevations[i] = getTmpElevation(osmNodeId);
 
-                    if (!Double.isNaN(firstLat) && !Double.isNaN(firstLon) && !Double.isNaN(lastLat) && !Double.isNaN(lastLon))
+                    int firstNode = getNodeMap().get(osmNodeIds.get(i-1));
+                    int lastNode = getNodeMap().get(osmNodeIds.get(i));
+                    double firstNodeLat = getTmpLatitude(firstNode), firstNodeLon = getTmpLongitude(firstNode);
+                    double lastNodeLat = getTmpLatitude(lastNode), lastNodeLon = getTmpLongitude(lastNode);
+
+                    if (!Double.isNaN(firstNodeLat) && !Double.isNaN(firstNodeLon) && !Double.isNaN(lastNodeLat) && !Double.isNaN(lastNodeLon))
                     {
-                        double estimatedDist = distCalc.calcDist(firstLat, firstLon, lastLat, lastLon);
-                        tmpDistances[i] = estimatedDist;
+                        double tmpDist = distCalc.calcDist(firstNodeLat, firstNodeLon, lastNodeLat, lastNodeLon);
+                        tmpDistances[i-1] = tmpDist;
                     }
+                }
 
-                } else {
-                    tmpDistances[i] = 0.0;
+                SimpleKalmanFilter filter = new SimpleKalmanFilter(tmpElevations, tmpElevations[0], 1, 6, tmpDistances, 20);
+                //MeanFilter filter = new MeanFilter(tmpElevations, tmpDistances, 60);
+                double[] estimatedElevations = filter.smooth();
+
+                for (int i = 0; i < estimatedElevations.length; i++) {
+                    osmNodeId = getNodeMap().get(osmNodeIds.get(i));
+                    updateTmpElevation(osmNodeId, Math.round(estimatedElevations[i] * 10) / 10);
                 }
             }
-
-            SimpleKalmanFilter skf = new SimpleKalmanFilter(tmpElevations, tmpElevations[0], 1, 6, tmpDistances, 20);
-            double[] estimatedElevations = skf.smooth();
-
-            for (int i = 0; i < estimatedElevations.length; i++) {
-                int osmNodeId = getNodeMap().get(osmNodeIds.get(i));
-                updateTmpElevation(osmNodeId, Math.round(estimatedElevations[i] * 10) / 10);
-            }
         }
-
 
         long wayFlags = encodingManager.handleWayTags(way, includeWay, relationFlags);
         if (wayFlags == 0)
@@ -604,6 +603,7 @@ public class OSMReader implements DataReader
         if (id == EMPTY)
             return false;
         if(id < TOWER_NODE){
+            ele = (getElevation(id) + ele) / 2;
             id = -id -3;
             nodeAccess.setElevation(id, ele);
             return true;
@@ -616,6 +616,24 @@ public class OSMReader implements DataReader
         } else
             // e.g. if id is not handled from preparse (e.g. was ignored via isInBounds)
             return false;
+    }
+
+    double getTmpElevation( int nodeId ) {
+        if (nodeId == EMPTY)
+            return Double.NaN;
+        if (nodeId < TOWER_NODE)
+        {
+            // tower node
+            nodeId = -nodeId - 3;
+            return nodeAccess.getElevation(nodeId);
+        } else if (nodeId > -TOWER_NODE)
+        {
+            // pillar node
+            nodeId = nodeId - 3;
+            return pillarInfo.getElevation(nodeId);
+        } else
+            // e.g. if id is not handled from preparse (e.g. was ignored via isInBounds)
+            return Double.NaN;
     }
 
     private void processNode( OSMNode node )
