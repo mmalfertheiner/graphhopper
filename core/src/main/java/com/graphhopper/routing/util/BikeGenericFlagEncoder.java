@@ -22,7 +22,6 @@ import com.graphhopper.reader.OSMWay;
 import com.graphhopper.util.Helper;
 import com.graphhopper.util.InstructionAnnotation;
 import com.graphhopper.util.Translation;
-import org.openstreetmap.osmosis.osmbinary.Osmformat;
 
 import java.util.*;
 
@@ -102,7 +101,6 @@ public class BikeGenericFlagEncoder extends AbstractFlagEncoder
         pavedSurfaceTags.add("paved");
         pavedSurfaceTags.add("asphalt");
         pavedSurfaceTags.add("metal");
-        pavedSurfaceTags.add("wood");
         pavedSurfaceTags.add("concrete");
         pavedSurfaceTags.add("concrete:lanes");
         pavedSurfaceTags.add("concrete:plates");
@@ -115,6 +113,7 @@ public class BikeGenericFlagEncoder extends AbstractFlagEncoder
         semipavedSurfaceTags.add("paving_stones:30");
         semipavedSurfaceTags.add("compacted");
         semipavedSurfaceTags.add("grass_paver");
+        semipavedSurfaceTags.add("wood");
 
         //Unpaved -> only for mtb
         unpavedSurfaceTags.add("unpaved");
@@ -599,10 +598,10 @@ public class BikeGenericFlagEncoder extends AbstractFlagEncoder
         else if ("tertiary".equals(highway))
             wayType = WayType.TERTIARY_ROAD;
         else if ("unclassified".equals(highway)) {
-            if (pavedSurfaceTags.contains(surfaceTag))
-                wayType = WayType.UNCLASSIFIED_PAVED;
-            else
+            if (!pavedSurfaceTags.contains(surfaceTag))
                 wayType = WayType.UNCLASSIFIED_UNPAVED;
+            else
+                wayType = WayType.UNCLASSIFIED_PAVED;
         }
         else if ("residential".equals(highway) || "living_street".equals(highway) || "service".equals(highway)){
 
@@ -712,7 +711,7 @@ public class BikeGenericFlagEncoder extends AbstractFlagEncoder
 
         private final int value;
 
-        private WayType( int value )
+        WayType( int value )
         {
             this.value = value;
         }
@@ -721,7 +720,7 @@ public class BikeGenericFlagEncoder extends AbstractFlagEncoder
         {
             return value;
         }
-    };
+    }
 
     protected void setHighwaySpeed( String highway, int speed )
     {

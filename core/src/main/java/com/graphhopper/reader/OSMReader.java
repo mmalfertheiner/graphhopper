@@ -394,16 +394,12 @@ public class OSMReader implements DataReader
                     }
                 }
 
-                SimpleKalmanFilter filter1 = new SimpleKalmanFilter(SimpleKalmanFilter.FORWARD, tmpElevations, 6, tmpDistances, 40);
-                SimpleKalmanFilter filter2 = new SimpleKalmanFilter(SimpleKalmanFilter.BACKWARD, tmpElevations, 6, tmpDistances, 40);
-                //MeanFilter filter = new MeanFilter(tmpElevations, tmpDistances, 60);
-                double[] estimatedElevations1 = filter1.smooth();
-                double[] estimatedElevations2 = filter2.smooth();
+                SmoothingFilter filter = new SimpleKalmanFilter(SimpleKalmanFilter.COMBINED, 6, tmpDistances, 40);
+                double[] estimatedElevations = filter.smooth(tmpElevations);
 
-
-                for (int i = 0; i < estimatedElevations1.length; i++) {
+                for (int i = 0; i < estimatedElevations.length; i++) {
                     osmNodeId = getNodeMap().get(osmNodeIds.get(i));
-                    updateTmpElevation(osmNodeId, (estimatedElevations1[i] + estimatedElevations2[i]) / 2);
+                    updateTmpElevation(osmNodeId, estimatedElevations[i]);
                 }
             }
         }

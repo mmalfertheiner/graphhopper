@@ -3,14 +3,11 @@ package com.graphhopper.util;
 public class MeanFilter implements SmoothingFilter {
 
 
-    private double[] measurements;
     private double[] smoothedMeasurements;
     private double[] distances;
     private double minDistance;
 
-    public MeanFilter(double[] measurements, double[] distances, double minDistance) {
-
-        this.measurements = measurements;
+    public MeanFilter(double[] distances, double minDistance) {
         setDistances(distances);
         this.minDistance = minDistance;
     }
@@ -20,14 +17,21 @@ public class MeanFilter implements SmoothingFilter {
         if(distances == null)
             throw new IllegalArgumentException("Distances can not be null");
 
-        if (distances.length + 1 != measurements.length)
-            throw new IllegalArgumentException("Distances must have exactly one entry less than measurements, but distances was " + distances.length + " and measurements is " + measurements.length);
 
         this.distances = distances;
     }
 
+    public void validateMeasurements(final double[] measurements){
+
+        if (distances.length + 1 != measurements.length)
+            throw new IllegalArgumentException("Distances must have exactly one entry less than measurements, but distances was " + distances.length + " and measurements is " + measurements.length);
+
+    }
+
     @Override
-    public double[] smooth() {
+    public double[] smooth(final double[] measurements) {
+
+        validateMeasurements(measurements);
 
         double tmpDistanceRight;
         double tmpDistanceLeft;
@@ -97,9 +101,9 @@ public class MeanFilter implements SmoothingFilter {
         double[] measurements = new double[]{2,4,6,4,2,2,2,6,8};
         double[] distance = new double[]{1,2,3,1,1,3,2,2};
 
-        MeanFilter meanFilter = new MeanFilter(measurements, distance, 3);
+        MeanFilter meanFilter = new MeanFilter(distance, 3);
 
-        double[] result = meanFilter.smooth();
+        double[] result = meanFilter.smooth(measurements);
 
         for(double r : result){
             System.out.print(" " + r);
