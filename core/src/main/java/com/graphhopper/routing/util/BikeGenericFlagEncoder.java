@@ -588,10 +588,9 @@ public class BikeGenericFlagEncoder extends AbstractFlagEncoder
         // Populate bits at wayTypeMask with wayType            
         WayType wayType = WayType.SMALL_WAY_PAVED;
         boolean isPushingSection = isPushingSection(way);
-        if (isPushingSection && !partOfCycleRelation || "steps".equals(highway))
+        if (isPushingSection && !partOfCycleRelation || "steps".equals(highway) || "ice".equals(surfaceTag))
             wayType = WayType.PUSHING_SECTION;
-
-        if ("primary".equals(highway))
+        else if ("primary".equals(highway))
             wayType = WayType.PRIMARY_ROAD;
         else if ("secondary".equals(highway))
             wayType = WayType.SECONDARY_ROAD;
