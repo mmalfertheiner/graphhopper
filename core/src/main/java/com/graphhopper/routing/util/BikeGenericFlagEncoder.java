@@ -21,6 +21,7 @@ import com.graphhopper.reader.OSMRelation;
 import com.graphhopper.reader.OSMWay;
 import com.graphhopper.util.Helper;
 import com.graphhopper.util.InstructionAnnotation;
+import com.graphhopper.util.PMap;
 import com.graphhopper.util.Translation;
 
 import java.util.*;
@@ -39,11 +40,11 @@ public class BikeGenericFlagEncoder extends AbstractFlagEncoder
     /**
      * Reports wether this edge is unpaved.
      */
-    //public static final int K_UNPAVED = 100;
     protected static final int PUSHING_SECTION_SPEED = 4;
-    // Pushing section heighways are parts where you need to get off your bike and push it (German: Schiebestrecke)
+    // Pushing section highways are parts where you need to get off your bike and push it (German: Schiebestrecke)
     protected final HashSet<String> pushingSections = new HashSet<String>();
     protected final HashSet<String> oppositeLanes = new HashSet<String>();
+    protected final Set<String> acceptedHighwayTags = new HashSet<String>();
     protected final Set<String> preferHighwayTags = new HashSet<String>();
     protected final Set<String> avoidHighwayTags = new HashSet<String>();
 
@@ -51,10 +52,9 @@ public class BikeGenericFlagEncoder extends AbstractFlagEncoder
     protected final Set<String> semipavedSurfaceTags = new HashSet<String>();
     protected final Set<String> unpavedSurfaceTags = new HashSet<String>();
 
-    private final Map<String, Integer> trackTypeSpeeds = new HashMap<String, Integer>();
-    private final Map<String, Integer> surfaceSpeeds = new HashMap<String, Integer>();
-    private final Set<String> roadValues = new HashSet<String>();
-    private final Map<String, Integer> highwaySpeeds = new HashMap<String, Integer>();
+    //private final Map<String, Integer> trackTypeSpeeds = new HashMap<String, Integer>();
+    private final Map<String, Float> surfaceSpeedFactors = new HashMap<String, Float>();
+    private final Map<Integer, Integer> wayTypeSpeeds = new HashMap<Integer, Integer>();
     // convert network tag of bicycle routes into a way route code
     private final Map<String, Integer> bikeNetworkToCode = new HashMap<String, Integer>();
     protected EncodedValue relationCodeEncoder;
@@ -66,6 +66,27 @@ public class BikeGenericFlagEncoder extends AbstractFlagEncoder
 
     // This is the specific bicycle class
     private String specificBicycleClass;
+
+    public BikeGenericFlagEncoder()
+    {
+        this(5, 2, 0);
+    }
+
+    public BikeGenericFlagEncoder( PMap properties )
+    {
+        this(
+                (int) properties.getLong("speedBits", 5),
+                properties.getDouble("speedFactor", 2),
+                properties.getBool("turnCosts", false) ? 1 : 0
+        );
+        this.properties = properties;
+        this.setBlockFords(properties.getBool("blockFords", true));
+    }
+
+    public BikeGenericFlagEncoder( String propertiesStr )
+    {
+        this(new PMap(propertiesStr));
+    }
 
     protected BikeGenericFlagEncoder(int speedBits, double speedFactor, int maxTurnCosts)
     {
@@ -128,82 +149,62 @@ public class BikeGenericFlagEncoder extends AbstractFlagEncoder
         unpavedSurfaceTags.add("salt");
         unpavedSurfaceTags.add("sand");
 
-        roadValues.add("living_street");
-        roadValues.add("road");
-        roadValues.add("service");
-        roadValues.add("unclassified");
-        roadValues.add("residential");
-        roadValues.add("trunk");
-        roadValues.add("trunk_link");
-        roadValues.add("primary");
-        roadValues.add("primary_link");
-        roadValues.add("secondary");
-        roadValues.add("secondary_link");
-        roadValues.add("tertiary");
-        roadValues.add("tertiary_link");
+        maxPossibleSpeed = 35;
 
-        maxPossibleSpeed = 30;
+        setSurfaceSpeedFactor("concrete:lanes", 0.9f);
+        setSurfaceSpeedFactor("concrete:plates", 0.9f);
+        setSurfaceSpeedFactor("metal", 0.9f);
+        setSurfaceSpeedFactor("cobblestone", 0.8f);
+        setSurfaceSpeedFactor("cobblestone:flattened", 0.9f);
+        setSurfaceSpeedFactor("grass", 0.9f);
+        setSurfaceSpeedFactor("grass_paver", 0.9f);
+        setSurfaceSpeedFactor("salt", 0.8f);
+        setSurfaceSpeedFactor("sand", 0.8f);
+        setSurfaceSpeedFactor("ice", 0.5f);
 
-        setTrackTypeSpeed("grade1", 18); // paved
-        setTrackTypeSpeed("grade2", 12); // now unpaved ...
-        setTrackTypeSpeed("grade3", 8);
-        setTrackTypeSpeed("grade4", 6);
-        setTrackTypeSpeed("grade5", 4); // like sand/grass     
+        setWayTypeSpeed(WayType.PRIMARY_ROAD.getValue(), 18);
+        setWayTypeSpeed(WayType.SECONDARY_ROAD.getValue(), 18);
+        setWayTypeSpeed(WayType.TERTIARY_ROAD.getValue(), 18);
+        setWayTypeSpeed(WayType.UNCLASSIFIED_PAVED.getValue(), 18);
+        setWayTypeSpeed(WayType.UNCLASSIFIED_UNPAVED.getValue(), 12);
+        setWayTypeSpeed(WayType.SMALL_WAY_PAVED.getValue(), 18);
+        setWayTypeSpeed(WayType.SMALL_WAY_SEMI_PAVED.getValue(), 14);
+        setWayTypeSpeed(WayType.SMALL_WAY_UNPAVED.getValue(), 10);
+        setWayTypeSpeed(WayType.TRACK_EASY.getValue(), 14);
+        setWayTypeSpeed(WayType.TRACK_MIDDLE.getValue(), 12);
+        setWayTypeSpeed(WayType.TRACK_HARD.getValue(), 8);
+        setWayTypeSpeed(WayType.PATH_EASY.getValue(), 12);
+        setWayTypeSpeed(WayType.PATH_MIDDLE.getValue(), 8);
+        setWayTypeSpeed(WayType.PATH_HARD.getValue(), 6);
+        setWayTypeSpeed(WayType.CYCLEWAY.getValue(), 16);
+        setWayTypeSpeed(WayType.PUSHING_SECTION.getValue(), PUSHING_SECTION_SPEED);
 
-        setSurfaceSpeed("paved", 18);
-        setSurfaceSpeed("asphalt", 18);
-        setSurfaceSpeed("cobblestone", 8);
-        setSurfaceSpeed("cobblestone:flattened", 10);
-        setSurfaceSpeed("sett", 10);
-        setSurfaceSpeed("concrete", 18);
-        setSurfaceSpeed("concrete:lanes", 16);
-        setSurfaceSpeed("concrete:plates", 16);
-        setSurfaceSpeed("paving_stones", 12);
-        setSurfaceSpeed("paving_stones:30", 12);
-        setSurfaceSpeed("unpaved", 14);
-        setSurfaceSpeed("compacted", 16);
-        setSurfaceSpeed("dirt", 10);
-        setSurfaceSpeed("earth", 12);
-        setSurfaceSpeed("fine_gravel", 18);
-        setSurfaceSpeed("grass", 8);
-        setSurfaceSpeed("grass_paver", 8);
-        setSurfaceSpeed("gravel", 12);
-        setSurfaceSpeed("ground", 12);
-        setSurfaceSpeed("ice", PUSHING_SECTION_SPEED / 2);
-        setSurfaceSpeed("metal", 10);
-        setSurfaceSpeed("mud", 10);
-        setSurfaceSpeed("pebblestone", 16);
-        setSurfaceSpeed("salt", 6);
-        setSurfaceSpeed("sand", 6);
-        setSurfaceSpeed("wood", 6);
 
-        setHighwaySpeed("living_street", 6);
-        setHighwaySpeed("steps", PUSHING_SECTION_SPEED / 2);
+        acceptedHighwayTags.add("living_street");
+        acceptedHighwayTags.add("steps");
+        acceptedHighwayTags.add("cycleway");
+        acceptedHighwayTags.add("path");
+        acceptedHighwayTags.add("footway");
+        acceptedHighwayTags.add("pedestrian");
+        acceptedHighwayTags.add("track");
+        acceptedHighwayTags.add("service");
+        acceptedHighwayTags.add("residential");
+        acceptedHighwayTags.add("road");
+        acceptedHighwayTags.add("trunk");
+        acceptedHighwayTags.add("trunk_link");
+        acceptedHighwayTags.add("primary");
+        acceptedHighwayTags.add("primary_link");
+        acceptedHighwayTags.add("secondary");
+        acceptedHighwayTags.add("secondary_link");
+        acceptedHighwayTags.add("tertiary");
+        acceptedHighwayTags.add("tertiary_link");
+        acceptedHighwayTags.add("motorway");
+        acceptedHighwayTags.add("motorway_link");
 
-        setHighwaySpeed("cycleway", 18);
-        setHighwaySpeed("path", 12);
-        setHighwaySpeed("footway", 6);
-        setHighwaySpeed("pedestrian", 6);
-        setHighwaySpeed("track", 12);
-        setHighwaySpeed("service", 14);
-        setHighwaySpeed("residential", 18);
-        // no other highway applies:
-        setHighwaySpeed("unclassified", 16);
-        // unknown road:
-        setHighwaySpeed("road", 12);
+        addPushingSection("footway");
+        addPushingSection("pedestrian");
+        addPushingSection("steps");
 
-        setHighwaySpeed("trunk", 18);
-        setHighwaySpeed("trunk_link", 18);
-        setHighwaySpeed("primary", 18);
-        setHighwaySpeed("primary_link", 18);
-        setHighwaySpeed("secondary", 18);
-        setHighwaySpeed("secondary_link", 18);
-        setHighwaySpeed("tertiary", 18);
-        setHighwaySpeed("tertiary_link", 18);
-
-        // special case see tests and #191
-        setHighwaySpeed("motorway", 18);
-        setHighwaySpeed("motorway_link", 18);
         avoidHighwayTags.add("motorway");
         avoidHighwayTags.add("motorway_link");
 
@@ -229,7 +230,7 @@ public class BikeGenericFlagEncoder extends AbstractFlagEncoder
     {
         // first two bits are reserved for route handling in superclass
         shift = super.defineWayBits(index, shift);
-        speedEncoder = new EncodedDoubleValue("Speed", shift, speedBits, speedFactor, highwaySpeeds.get("cycleway"),
+        speedEncoder = new EncodedDoubleValue("Speed", shift, speedBits, speedFactor, getWayTypeSpeed(14),
                 maxPossibleSpeed);
         shift += speedEncoder.getBits();
 
@@ -271,7 +272,7 @@ public class BikeGenericFlagEncoder extends AbstractFlagEncoder
             return 0;
         }
 
-        if (!highwaySpeeds.containsKey(highwayValue))
+        if (!acceptedHighwayTags.contains(highwayValue))
             return 0;
 
         // use the way if it is tagged for bikes
@@ -313,7 +314,8 @@ public class BikeGenericFlagEncoder extends AbstractFlagEncoder
     {
         // other scales are nearly impossible by an ordinary bike, see http://wiki.openstreetmap.org/wiki/Key:sac_scale
         // Mountainhiking may be possible for downhill racers
-        return "hiking".equals(sacScale);
+        return "hiking".equals(sacScale) || "mountain_hiking".equals(sacScale)
+                || "demanding_mountain_hiking".equals(sacScale) || "alpine_hiking".equals(sacScale);
     }
 
     @Override
@@ -345,12 +347,13 @@ public class BikeGenericFlagEncoder extends AbstractFlagEncoder
         long encoded = 0;
         if (!isFerry(allowed))
         {
-            double speed = getSpeed(way);
+            encoded = handleBikeRelated(way, encoded, relationFlags > UNCHANGED.getValue());
+
+            double speed = getSpeed(way, encoded);
 
             // bike maxspeed handling is different from car as we don't increase speed
             speed = applyMaxSpeed(way, speed, false);
             encoded = handleSpeed(way, speed, encoded);
-            encoded = handleBikeRelated(way, encoded, relationFlags > UNCHANGED.getValue());
 
             boolean isRoundabout = way.hasTag("junction", "roundabout");
             if (isRoundabout)
@@ -361,9 +364,9 @@ public class BikeGenericFlagEncoder extends AbstractFlagEncoder
         } else
         {
             encoded = handleFerryTags(way,
-                    highwaySpeeds.get("living_street"),
-                    highwaySpeeds.get("track"),
-                    highwaySpeeds.get("primary"));
+                    getWayTypeSpeed(WayType.SMALL_WAY_UNPAVED.getValue()),
+                    getWayTypeSpeed(WayType.SMALL_WAY_PAVED.getValue()),
+                    getWayTypeSpeed(WayType.PRIMARY_ROAD.getValue()));
             encoded |= directionBitMask;
         }
         int priorityFromRelation = 0;
@@ -374,58 +377,33 @@ public class BikeGenericFlagEncoder extends AbstractFlagEncoder
         return encoded;
     }
 
-    int getSpeed( OSMWay way )
+    int getSpeed( OSMWay way, long flags )
     {
         int speed = PUSHING_SECTION_SPEED;
-        String highwayTag = way.getTag("highway");
-        Integer highwaySpeed = highwaySpeeds.get(highwayTag);
 
-        String s = way.getTag("surface");
-        if (!Helper.isEmpty(s))
-        {
-            Integer surfaceSpeed = surfaceSpeeds.get(s);
-            if (surfaceSpeed != null)
-            {
-                speed = surfaceSpeed;
-                // Boost handling for good surfaces
-                if (highwaySpeed != null && surfaceSpeed > highwaySpeed)
-                {
-                    // Avoid boosting if pushing section
-                    if (pushingSections.contains(highwayTag))
-                        speed = highwaySpeed;
-                    else
-                        speed = surfaceSpeed;
+        int wayType = (int) getWayType(flags);
+        String surfaceTag = way.getTag("surface");
+
+        Integer highwaySpeed = getWayTypeSpeed(wayType);
+
+        if(highwaySpeed != null) {
+
+            speed = highwaySpeed;
+
+            if (!Helper.isEmpty(surfaceTag)) {
+                Float surfaceSpeedFactor = surfaceSpeedFactors.get(surfaceTag);
+                if (surfaceSpeedFactor != null && highwaySpeed != null) {
+                    speed = Math.round(surfaceSpeedFactor * highwaySpeed);
                 }
             }
-        } else
-        {
-            String tt = way.getTag("tracktype");
-            if (!Helper.isEmpty(tt))
-            {
-                Integer tInt = trackTypeSpeeds.get(tt);
-                if (tInt != null)
-                    speed = tInt;
-            } else
-            {
-                if (highwaySpeed != null)
-                {
-                    if (!way.hasTag("service"))
-                        speed = highwaySpeed;
-                    else
-                        speed = highwaySpeeds.get("living_street");
-                }
-            }
-        }
 
-        // Until now we assumed that the way is no pushing section
-        // Now we check, but only in case that our speed is bigger compared to the PUSHING_SECTION_SPEED
-        if ((speed > PUSHING_SECTION_SPEED)
-                && (!way.hasTag("bicycle", intendedValues) && way.hasTag("highway", pushingSections)))
-        {
-            if (way.hasTag("highway", "steps"))
-                speed = PUSHING_SECTION_SPEED / 2;
-            else
-                speed = PUSHING_SECTION_SPEED;
+            if (way.hasTag("highway", "living_street")) {
+                speed = (int) Math.round(highwaySpeed * 0.5);
+            }
+
+            if(way.hasTag("highway", "steps")) {
+                speed = (int) Math.round(highwaySpeed * 0.5);
+            }
         }
 
         return speed;
@@ -588,13 +566,14 @@ public class BikeGenericFlagEncoder extends AbstractFlagEncoder
         // Populate bits at wayTypeMask with wayType            
         WayType wayType = WayType.SMALL_WAY_PAVED;
         boolean isPushingSection = isPushingSection(way);
+
         if (isPushingSection && !partOfCycleRelation || "steps".equals(highway) || "ice".equals(surfaceTag))
             wayType = WayType.PUSHING_SECTION;
-        else if ("primary".equals(highway))
+        else if ("primary".equals(highway) || "primary_link".equals(highway))
             wayType = WayType.PRIMARY_ROAD;
-        else if ("secondary".equals(highway))
+        else if ("secondary".equals(highway) || "secondary_link".equals(highway))
             wayType = WayType.SECONDARY_ROAD;
-        else if ("tertiary".equals(highway))
+        else if ("tertiary".equals(highway) || "tertiary_link".equals(highway))
             wayType = WayType.TERTIARY_ROAD;
         else if ("unclassified".equals(highway)) {
             if (!pavedSurfaceTags.contains(surfaceTag))
@@ -689,7 +668,7 @@ public class BikeGenericFlagEncoder extends AbstractFlagEncoder
         return encoded;
     }
 
-    private enum WayType
+    protected enum WayType
     {
         PRIMARY_ROAD(0),
         SECONDARY_ROAD(1),
@@ -721,24 +700,19 @@ public class BikeGenericFlagEncoder extends AbstractFlagEncoder
         }
     }
 
-    protected void setHighwaySpeed( String highway, int speed )
+    protected void setWayTypeSpeed(int wayType, int speed)
     {
-        highwaySpeeds.put(highway, speed);
+        wayTypeSpeeds.put(wayType, speed);
     }
 
-    protected int getHighwaySpeed( String key )
+    protected int getWayTypeSpeed( int wayType )
     {
-        return highwaySpeeds.get(key);
+        return wayTypeSpeeds.get(wayType);
     }
 
-    void setTrackTypeSpeed( String tracktype, int speed )
+    void setSurfaceSpeedFactor(String surface, float factor)
     {
-        trackTypeSpeeds.put(tracktype, speed);
-    }
-
-    void setSurfaceSpeed( String surface, int speed )
-    {
-        surfaceSpeeds.put(surface, speed);
+        surfaceSpeedFactors.put(surface, factor);
     }
 
     void setCyclingNetworkPreference( String network, int code )
@@ -775,4 +749,10 @@ public class BikeGenericFlagEncoder extends AbstractFlagEncoder
     }
 
     public double getPriorityValue ( long flags) { return this.priorityWayEncoder.getValue(flags); }
+
+    @Override
+    public String toString()
+    {
+        return "generic_bike";
+    }
 }

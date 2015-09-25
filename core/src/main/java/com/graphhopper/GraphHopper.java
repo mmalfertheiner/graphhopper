@@ -549,7 +549,6 @@ public class GraphHopper implements GraphHopperAPI
             cgiarProvider.setAutoRemoveTemporaryFiles(args.getBool("graph.elevation.cgiar.clear", true));
             tmpProvider = cgiarProvider;
         } else if (eleProviderStr.equalsIgnoreCase("srtm1degV3")){
-            System.out.println("Using high precision srtm v3");
             tmpProvider = new HighPrecisionSRTMProvider();
         }
 
