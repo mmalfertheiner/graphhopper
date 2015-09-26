@@ -60,6 +60,10 @@ public class BikeGenericFlagEncoder extends AbstractFlagEncoder
     protected EncodedValue relationCodeEncoder;
     protected EncodedValue wayTypeEncoder;
     EncodedValue priorityWayEncoder;
+    protected EncodedValue inclineSlopeEncoder;
+    protected EncodedValue declineSlopeEncoder;
+    protected EncodedValue inclineDistancePercentageEncoder;
+
 
     // Car speed limit which switches the preference from UNCHANGED to AVOID_IF_POSSIBLE
     private int avoidSpeedLimit;
@@ -238,8 +242,21 @@ public class BikeGenericFlagEncoder extends AbstractFlagEncoder
         wayTypeEncoder = new EncodedValue("WayType", shift, 4, 1, 0, 15, true);
         shift += wayTypeEncoder.getBits();
 
+        // 3 bits to store preference on specific ways
         priorityWayEncoder = new EncodedValue("PreferWay", shift, 3, 1, 0, 7);
         shift += priorityWayEncoder.getBits();
+
+        // 6 bits to store incline
+        inclineSlopeEncoder = new EncodedValue("InclineSlope", shift, 6, 1, 0, 40, true);
+        shift += inclineSlopeEncoder.getBits();
+
+        // 6 bits to store decline
+        declineSlopeEncoder = new EncodedValue("DeclineSlope", shift, 6, 1, 0, 40, true);
+        shift += declineSlopeEncoder.getBits();
+
+        // 7 bits to store percentage of inclining distance
+        inclineDistancePercentageEncoder = new EncodedValue("InclineDistancePercentage", shift, 7, 1, 50, 100, true);
+        shift += inclineDistancePercentageEncoder.getBits();
 
         return shift;
     }
