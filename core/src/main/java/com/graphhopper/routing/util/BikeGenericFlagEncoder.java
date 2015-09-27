@@ -19,14 +19,12 @@ package com.graphhopper.routing.util;
 
 import com.graphhopper.reader.OSMRelation;
 import com.graphhopper.reader.OSMWay;
-import com.graphhopper.util.Helper;
-import com.graphhopper.util.InstructionAnnotation;
-import com.graphhopper.util.PMap;
-import com.graphhopper.util.Translation;
+import com.graphhopper.util.*;
 
 import java.util.*;
 
 import static com.graphhopper.routing.util.PriorityCode.*;
+import static com.graphhopper.util.Helper.keepIn;
 
 /**
  * This generic flag encoder stores for each way its street classification. In order to reason in even more detail.
@@ -60,9 +58,9 @@ public class BikeGenericFlagEncoder extends AbstractFlagEncoder
     protected EncodedValue relationCodeEncoder;
     protected EncodedValue wayTypeEncoder;
     EncodedValue priorityWayEncoder;
-    protected EncodedValue inclineSlopeEncoder;
-    protected EncodedValue declineSlopeEncoder;
-    protected EncodedValue inclineDistancePercentageEncoder;
+    protected EncodedDoubleValue inclineSlopeEncoder;
+    protected EncodedDoubleValue declineSlopeEncoder;
+    protected EncodedDoubleValue inclineDistancePercentageEncoder;
 
 
     // Car speed limit which switches the preference from UNCHANGED to AVOID_IF_POSSIBLE
@@ -247,15 +245,15 @@ public class BikeGenericFlagEncoder extends AbstractFlagEncoder
         shift += priorityWayEncoder.getBits();
 
         // 6 bits to store incline
-        inclineSlopeEncoder = new EncodedValue("InclineSlope", shift, 6, 1, 0, 40, true);
+        inclineSlopeEncoder = new EncodedDoubleValue("InclineSlope", shift, 6, 1, 0, 40, true);
         shift += inclineSlopeEncoder.getBits();
 
         // 6 bits to store decline
-        declineSlopeEncoder = new EncodedValue("DeclineSlope", shift, 6, 1, 0, 40, true);
+        declineSlopeEncoder = new EncodedDoubleValue("DeclineSlope", shift, 6, 1, 0, 40, true);
         shift += declineSlopeEncoder.getBits();
 
         // 7 bits to store percentage of inclining distance
-        inclineDistancePercentageEncoder = new EncodedValue("InclineDistancePercentage", shift, 7, 1, 50, 100, true);
+        inclineDistancePercentageEncoder = new EncodedDoubleValue("InclineDistancePercentage", shift, 7, 1, 50, 100, true);
         shift += inclineDistancePercentageEncoder.getBits();
 
         return shift;
@@ -637,12 +635,103 @@ public class BikeGenericFlagEncoder extends AbstractFlagEncoder
     }
 
     @Override
+    public void applyWayTags(OSMWay way, EdgeIteratorState edge) {
+        PointList pl = edge.fetchWayGeometry(3);
+        if (!pl.is3D())
+            throw new IllegalStateException("To support speed calculation based on elevation data it is necessary to enable import of it.");
+
+        long flags = edge.getFlags();
+
+        double fwdIncline = 0;
+        double fwdDecline = 0;
+        double inclineDistancePercentage = 100;
+
+        if (way.hasTag("tunnel", "yes") || way.hasTag("bridge", "yes") || way.hasTag("highway", "steps"))
+        {
+            // do not change speed
+            // note: although tunnel can have a difference in elevation it is very unlikely that the elevation data is correct for a tunnel
+        } else
+        {
+            // Decrease the speed for ele increase (incline), and decrease the speed for ele decrease (decline). The speed-decrease
+            // has to be bigger (compared to the speed-increase) for the same elevation difference to simulate loosing energy and avoiding hills.
+            // For the reverse speed this has to be the opposite but again keeping in mind that up+down difference.
+            double incEleSum = 0, incDist2DSum = 0;
+            double decEleSum = 0, decDist2DSum = 0;
+            // double prevLat = pl.getLatitude(0), prevLon = pl.getLongitude(0);
+            double prevEle = pl.getElevation(0);
+            double fullDist2D = edge.getDistance();
+
+            if (Double.isInfinite(fullDist2D))
+            {
+                System.err.println("infinity distance? for way:" + way.getId());
+                return;
+            }
+            // for short edges an incline makes no sense and for 0 distances could lead to NaN values for speed, see #432
+            if (fullDist2D < 1)
+                return;
+
+            double eleDelta = pl.getElevation(pl.size() - 1) - prevEle;
+            if (eleDelta >= 0)
+            {
+                incEleSum = eleDelta;
+                incDist2DSum = fullDist2D;
+            } else if (eleDelta < 0)
+            {
+                decEleSum = -eleDelta;
+                decDist2DSum = fullDist2D;
+            }
+
+//            // get a more detailed elevation information, but due to bad SRTM data this does not make sense now.
+//            for (int i = 1; i < pl.size(); i++)
+//            {
+//                double lat = pl.getLatitude(i);
+//                double lon = pl.getLongitude(i);
+//                double ele = pl.getElevation(i);
+//                double eleDelta = ele - prevEle;
+//                double dist2D = distCalc.calcDist(prevLat, prevLon, lat, lon);
+//                if (eleDelta > 0.1)
+//                {
+//                    incEleSum += eleDelta;
+//                    incDist2DSum += dist2D;
+//                } else if (eleDelta < -0.1)
+//                {
+//                    decEleSum += -eleDelta;
+//                    decDist2DSum += dist2D;
+//                }
+//                fullDist2D += dist2D;
+//                prevLat = lat;
+//                prevLon = lon;
+//                prevEle = ele;
+//            }
+            // Calculate slop via tan(asin(height/distance)) but for rather smallish angles where we can assume tan a=a and sin a=a.
+            // Then calculate a factor which decreases or increases the speed.
+            // Do this via a simple quadratic equation where y(0)=1 and y(0.3)=1/4 for incline and y(0.3)=2 for decline
+
+            fwdIncline = incDist2DSum > 1 ? incEleSum / incDist2DSum : 0;
+            fwdDecline = decDist2DSum > 1 ? decEleSum / decDist2DSum : 0;
+            inclineDistancePercentage = keepIn(incDist2DSum / fullDist2D * 100, 0, 100);
+        }
+
+        flags = inclineSlopeEncoder.setDoubleValue(flags, fwdIncline);
+        flags = declineSlopeEncoder.setDoubleValue(flags, fwdDecline);
+        flags = inclineDistancePercentageEncoder.setDoubleValue(flags, inclineDistancePercentage);
+
+        edge.setFlags(flags);
+    }
+
+    @Override
     public double getDouble( long flags, int key )
     {
         switch (key)
         {
-            case PriorityWeighting.KEY:
+            case DynamicWeighting.PRIORITY_KEY:
                 return (double) priorityWayEncoder.getValue(flags) / BEST.getValue();
+            case DynamicWeighting.INC_SLOPE_KEY:
+                return inclineSlopeEncoder.getDoubleValue(flags);
+            case DynamicWeighting.DEC_SLOPE_KEY:
+                return declineSlopeEncoder.getDoubleValue(flags);
+            case DynamicWeighting.INC_DIST_PERCENTAGE_KEY:
+                return inclineDistancePercentageEncoder.getDoubleValue(flags);
             default:
                 return super.getDouble(flags, key);
         }

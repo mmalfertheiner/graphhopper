@@ -887,6 +887,10 @@ public class GraphHopper implements GraphHopperAPI
                 return new PriorityWeighting(encoder, weightingMap);
             else
                 return new FastestWeighting(encoder, weightingMap);
+        } else if ("dynamic".equalsIgnoreCase(weighting))
+        {
+            System.out.println("IM USING DYNAMIC WEIGHTING");
+            return new DynamicWeighting(encoder);
         }
 
         throw new UnsupportedOperationException("weighting " + weighting + " not supported");
