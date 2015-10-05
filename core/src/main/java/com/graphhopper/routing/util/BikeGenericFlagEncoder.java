@@ -38,7 +38,7 @@ public class BikeGenericFlagEncoder extends AbstractFlagEncoder
     /**
      * Reports wether this edge is unpaved.
      */
-    protected static final int PUSHING_SECTION_SPEED = 4;
+    public static final int PUSHING_SECTION_SPEED = 4;
     // Pushing section highways are parts where you need to get off your bike and push it (German: Schiebestrecke)
     protected final HashSet<String> pushingSections = new HashSet<String>();
     protected final HashSet<String> oppositeLanes = new HashSet<String>();
@@ -707,10 +707,13 @@ public class BikeGenericFlagEncoder extends AbstractFlagEncoder
             // Then calculate a factor which decreases or increases the speed.
             // Do this via a simple quadratic equation where y(0)=1 and y(0.3)=1/4 for incline and y(0.3)=2 for decline
 
-            fwdIncline = incDist2DSum > 1 ? incEleSum / incDist2DSum : 0;
-            fwdDecline = decDist2DSum > 1 ? decEleSum / decDist2DSum : 0;
+            fwdIncline = incDist2DSum > 1 ? (incEleSum / incDist2DSum) * 100 : 0;
+            fwdDecline = decDist2DSum > 1 ? (decEleSum / decDist2DSum) * 100 : 0;
             inclineDistancePercentage = keepIn(incDist2DSum / fullDist2D * 100, 0, 100);
         }
+
+        fwdIncline = fwdIncline > 40 ? 40 : fwdIncline;
+        fwdDecline = fwdDecline > 40 ? 40 : fwdDecline;
 
         flags = inclineSlopeEncoder.setDoubleValue(flags, fwdIncline);
         flags = declineSlopeEncoder.setDoubleValue(flags, fwdDecline);

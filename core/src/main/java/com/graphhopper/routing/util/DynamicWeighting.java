@@ -19,6 +19,7 @@
 package com.graphhopper.routing.util;
 
 import com.graphhopper.util.EdgeIteratorState;
+import com.graphhopper.util.Helper;
 import com.graphhopper.util.PMap;
 
 import static com.graphhopper.util.Helper.keepIn;
@@ -83,11 +84,12 @@ public class DynamicWeighting implements Weighting
 
     private double adjustSpeed(double speed, EdgeIteratorState edgeState, boolean reverse) {
 
-        double incElevation = flagEncoder.getDouble(edgeState.getFlags(), INC_SLOPE_KEY);
-        double decElevation = flagEncoder.getDouble(edgeState.getFlags(), DEC_SLOPE_KEY);
-        double incDistPercentage = flagEncoder.getDouble(edgeState.getFlags(), INC_DIST_PERCENTAGE_KEY);
+        double incElevation = flagEncoder.getDouble(edgeState.getFlags(), DynamicWeighting.INC_SLOPE_KEY) / 100;
+        double decElevation = flagEncoder.getDouble(edgeState.getFlags(), DynamicWeighting.DEC_SLOPE_KEY) / 100;
+        double incDistPercentage = flagEncoder.getDouble(edgeState.getFlags(), DynamicWeighting.INC_DIST_PERCENTAGE_KEY) / 100;
 
-        double incDist2DSum = edgeState.getDistance() * incDistPercentage / 100;
+
+        double incDist2DSum = edgeState.getDistance() * incDistPercentage;
         double decDist2DSum = edgeState.getDistance() - incDist2DSum;
 
         double adjustedSpeed = speed;
@@ -95,18 +97,20 @@ public class DynamicWeighting implements Weighting
         if (!reverse)
         {
             // use weighted mean so that longer incline infuences speed more than shorter
-            double fwdFaster = 1 + 2 * keepIn(incElevation, 0, 0.4);
+            double fwdFaster = 1 + 2 * keepIn(decElevation, 0, 0.2);
             fwdFaster = fwdFaster * fwdFaster;
-            double fwdSlower = 1 - 5 * keepIn(decElevation, 0, 0.4);
+            double fwdSlower = 1 - 5 * keepIn(incElevation, 0, 0.2);
             fwdSlower = fwdSlower * fwdSlower;
-            adjustedSpeed = speed * (fwdSlower * incDist2DSum + fwdFaster * decDist2DSum) / edgeState.getDistance();
+            adjustedSpeed = keepIn(speed * (fwdSlower * incDist2DSum + fwdFaster * decDist2DSum) / edgeState.getDistance(), BikeGenericFlagEncoder.PUSHING_SECTION_SPEED / 2, 50);
         } else {
-            double fwdFaster = 1 + 2 * keepIn(decElevation, 0, 0.4);
+            double fwdFaster = 1 + 2 * keepIn(incElevation, 0, 0.2);
             fwdFaster = fwdFaster * fwdFaster;
-            double fwdSlower = 1 - 5 * keepIn(incElevation, 0, 0.4);
+            double fwdSlower = 1 - 5 * keepIn(decElevation, 0, 0.2);
             fwdSlower = fwdSlower * fwdSlower;
-            adjustedSpeed = speed * (fwdSlower * decDist2DSum + fwdFaster * incDist2DSum) / edgeState.getDistance();
+            adjustedSpeed = keepIn(speed * (fwdSlower * decDist2DSum + fwdFaster * incDist2DSum) / edgeState.getDistance(), BikeGenericFlagEncoder.PUSHING_SECTION_SPEED / 2, 50);
         }
+
+        System.out.println("NEW SPEED: " + Helper.round2(adjustedSpeed) + ", SPEED: " + speed + ", INC ELE: " + incElevation + ", DEC ELE: " + decElevation + ", PERCENTAGE: " + incDistPercentage);
 
         return adjustedSpeed;
     }

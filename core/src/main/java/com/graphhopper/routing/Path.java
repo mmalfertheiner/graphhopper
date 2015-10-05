@@ -17,7 +17,9 @@
  */
 package com.graphhopper.routing;
 
+import com.graphhopper.routing.util.BikeGenericFlagEncoder;
 import com.graphhopper.routing.util.DefaultEdgeFilter;
+import com.graphhopper.routing.util.DynamicWeighting;
 import com.graphhopper.routing.util.FlagEncoder;
 import com.graphhopper.storage.EdgeEntry;
 import com.graphhopper.storage.Graph;
@@ -28,6 +30,8 @@ import gnu.trove.list.array.TIntArrayList;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import static com.graphhopper.util.Helper.keepIn;
 
 /**
  * Stores the nodes for the found path of an algorithm. It additionally needs the edgeIds to make
@@ -239,6 +243,8 @@ public class Path
             throw new IllegalStateException("Calculating time should not require to read speed from edge in wrong direction. "
                     + "Reverse:" + revert + ", fwd:" + encoder.isForward(flags) + ", bwd:" + encoder.isBackward(flags));
 
+        System.out.println(revert);
+
         double speed = revert ? encoder.getReverseSpeed(flags) : encoder.getSpeed(flags);
         if (Double.isInfinite(speed) || Double.isNaN(speed) || speed < 0)
             throw new IllegalStateException("Invalid speed stored in edge! " + speed);
@@ -362,6 +368,71 @@ public class Path
             }
         });
         return points;
+    }
+
+    public void updateTime(){
+
+        time = 0;
+
+        forEveryEdge(new EdgeVisitor() {
+
+            @Override
+            public void next(EdgeIteratorState edgeBase, int index) {
+
+                double speed = encoder.getSpeed(edgeBase.getFlags());
+
+                if (Double.isInfinite(speed) || Double.isNaN(speed) || speed < 0)
+                    throw new IllegalStateException("Invalid speed stored in edge! " + speed);
+
+                if (speed == 0)
+                    throw new IllegalStateException("Speed cannot be 0 for unblocked edge, use access properties to mark edge blocked! Should only occur for shortest path calculation. See #242.");
+
+
+                speed = adjustSpeed(speed, edgeBase, false);
+
+                double edgeTime = edgeBase.getDistance() / speed * 3600;
+
+                // add direction penalties at start/stop/via points
+                boolean penalizeEdge = edgeBase.getBoolean(EdgeIteratorState.K_UNFAVORED_EDGE, false, false);
+                if (penalizeEdge)
+                    edgeTime += 300; //pMap.getDouble("heading_penalty", DEFAULT_HEADING_PENALTY);
+
+                time += edgeTime;
+            }
+        });
+
+    }
+
+    private double adjustSpeed(double speed, EdgeIteratorState edgeState, boolean reverse) {
+
+        double incElevation = encoder.getDouble(edgeState.getFlags(), DynamicWeighting.INC_SLOPE_KEY) / 100;
+        double decElevation = encoder.getDouble(edgeState.getFlags(), DynamicWeighting.DEC_SLOPE_KEY) / 100;
+        double incDistPercentage = encoder.getDouble(edgeState.getFlags(), DynamicWeighting.INC_DIST_PERCENTAGE_KEY) / 100;
+
+
+        double incDist2DSum = edgeState.getDistance() * incDistPercentage;
+        double decDist2DSum = edgeState.getDistance() - incDist2DSum;
+
+        double adjustedSpeed = speed;
+
+        if (!reverse)
+        {
+            // use weighted mean so that longer incline infuences speed more than shorter
+            double fwdFaster = 1 + 2 * keepIn(decElevation, 0, 0.2);
+            fwdFaster = fwdFaster * fwdFaster;
+            double fwdSlower = 1 - 5 * keepIn(incElevation, 0, 0.2);
+            fwdSlower = fwdSlower * fwdSlower;
+            adjustedSpeed = keepIn(speed * (fwdSlower * incDist2DSum + fwdFaster * decDist2DSum) / edgeState.getDistance(), BikeGenericFlagEncoder.PUSHING_SECTION_SPEED / 2, 50);
+        } else {
+            double fwdFaster = 1 + 2 * keepIn(incElevation, 0, 0.2);
+            fwdFaster = fwdFaster * fwdFaster;
+            double fwdSlower = 1 - 5 * keepIn(decElevation, 0, 0.2);
+            fwdSlower = fwdSlower * fwdSlower;
+            adjustedSpeed = keepIn(speed * (fwdSlower * decDist2DSum + fwdFaster * incDist2DSum) / edgeState.getDistance(), BikeGenericFlagEncoder.PUSHING_SECTION_SPEED / 2, 50);
+        }
+        System.out.println("NEW SPEED: " + Helper.round2(adjustedSpeed) + ", SPEED: " + speed + ", INC ELE: " + incElevation + ", DEC ELE: " + decElevation + ", PERCENTAGE: " + incDistPercentage);
+
+        return adjustedSpeed;
     }
 
     /**
