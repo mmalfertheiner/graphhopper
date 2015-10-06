@@ -229,6 +229,7 @@ public class Path
         double dist = iter.getDistance();
         distance += dist;
         time += calcMillis(dist, iter.getFlags(), false);
+        System.out.println(time);
         addEdge(edgeId);
     }
 
@@ -243,9 +244,9 @@ public class Path
             throw new IllegalStateException("Calculating time should not require to read speed from edge in wrong direction. "
                     + "Reverse:" + revert + ", fwd:" + encoder.isForward(flags) + ", bwd:" + encoder.isBackward(flags));
 
-        System.out.println(revert);
 
         double speed = revert ? encoder.getReverseSpeed(flags) : encoder.getSpeed(flags);
+
         if (Double.isInfinite(speed) || Double.isNaN(speed) || speed < 0)
             throw new IllegalStateException("Invalid speed stored in edge! " + speed);
 

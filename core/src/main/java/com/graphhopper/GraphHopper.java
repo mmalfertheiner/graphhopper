@@ -1182,14 +1182,11 @@ public class GraphHopper implements GraphHopperAPI
                     throw new IllegalStateException("RoutingAlgorithmFactory is not suited for CH preparation " + entry.getValue());
 
                 final String name = CHGraphImpl.weightingToFileName(entry.getKey());
-                chPreparePool.execute(new Runnable()
-                {
+                chPreparePool.execute(new Runnable() {
                     @Override
-                    public void run()
-                    {
+                    public void run() {
                         String errorKey = "prepare.error." + name;
-                        try
-                        {
+                        try {
                             ghStorage.getProperties().put(errorKey, "CH preparation incomplete");
                             // toString is not taken into account so we need to cheat, see http://stackoverflow.com/q/6113746/194609 for other options                        
                             Thread.currentThread().setName(name);
@@ -1197,8 +1194,7 @@ public class GraphHopper implements GraphHopperAPI
                             pch.doWork();
                             ghStorage.getProperties().put(errorKey, "");
                             ghStorage.getProperties().put("prepare.date." + name, formatDateTime(new Date()));
-                        } catch (Exception ex)
-                        {
+                        } catch (Exception ex) {
                             logger.error("Problem while CH preparation " + name);
                             ghStorage.getProperties().put(errorKey, ex.getMessage());
                         }

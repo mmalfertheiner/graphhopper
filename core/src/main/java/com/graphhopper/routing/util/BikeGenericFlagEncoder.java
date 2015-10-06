@@ -267,6 +267,20 @@ public class BikeGenericFlagEncoder extends AbstractFlagEncoder
     }
 
     @Override
+    public long reverseFlags( long flags )
+    {
+        // swap access
+        flags = super.reverseFlags(flags);
+
+        // swap slopes
+        double incValue = inclineSlopeEncoder.getDoubleValue(flags);
+        flags = inclineSlopeEncoder.setDoubleValue(flags, declineSlopeEncoder.getDoubleValue(flags));
+        double inclineDistPercentage = 100 - inclineDistancePercentageEncoder.getDoubleValue(flags);
+        flags = inclineDistancePercentageEncoder.setDoubleValue(flags, inclineDistPercentage);
+        return declineSlopeEncoder.setDoubleValue(flags, incValue);
+    }
+
+    @Override
     public long acceptWay( OSMWay way )
     {
         String highwayValue = way.getTag("highway");
