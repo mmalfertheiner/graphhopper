@@ -315,7 +315,7 @@ GHRequest.prototype.init = function (params) {
 
     // overwrite elevation e.g. important if not supported from feature set
     this.api_params.elevation = false;
-    var featureSet = this.features[params.vehicle];
+    var featureSet = this.features[this.api_params.vehicle];
     if (featureSet && featureSet.elevation) {
         if ('elevation' in params)
             this.api_params.elevation = params.elevation;
@@ -377,7 +377,7 @@ GHRequest.prototype.createGeocodeURL = function (host, prevIndex) {
     var path = this.createPath(tmpHost + "/geocode?limit=6&type=" + this.dataType + "&key=" + this.key);
     if (prevIndex >= 0 && prevIndex < this.route.size()) {
         var point = this.route.getIndex(prevIndex);
-        path += "&lat=" + point.lat + "&lon=" + point.lng;
+        path += "&point=" + point.lat + "," + point.lng;
     }
     return path;
 };

@@ -353,8 +353,8 @@ public class OSMReader implements DataReader
         long relationFlags = getRelFlagsMap().get(way.getId());
 
         // TODO move this after we have created the edge and know the coordinates => encodingManager.applyWayTags
-        // estimate length of the track e.g. for ferry speed calculation
         TLongList osmNodeIds = way.getNodes();
+        // Estimate length of ways containing a route tag e.g. for ferry speed calculation
         if (osmNodeIds.size() > 1)
         {
             int first = getNodeMap().get(osmNodeIds.get(0));
@@ -365,6 +365,7 @@ public class OSMReader implements DataReader
             if (!Double.isNaN(firstLat) && !Double.isNaN(firstLon) && !Double.isNaN(lastLat) && !Double.isNaN(lastLon))
             {
                 estimatedDist = distCalc.calcDist(firstLat, firstLon, lastLat, lastLon);
+                // Add artificial tag for the estamated distance and center
                 way.setTag("estimated_distance", estimatedDist);
                 way.setTag("estimated_center", new GHPoint((firstLat + lastLat) / 2, (firstLon + lastLon) / 2));
             }
@@ -401,6 +402,20 @@ public class OSMReader implements DataReader
                     osmNodeId = getNodeMap().get(osmNodeIds.get(i));
                     updateTmpElevation(osmNodeId, estimatedElevations[i]);
                 }
+            }
+        }
+
+        if (way.getTag("duration") != null)
+        {
+            try
+            {
+                long dur = OSMTagParser.parseDuration(way.getTag("duration"));
+                // Provide the duration value in seconds in an artificial graphhopper specific tag:
+                way.setTag("duration:seconds", Long.toString(dur));
+            }
+            catch(Exception ex)
+            {
+                logger.warn("Parsing error in way with OSMID=" + way.getId() + " : " + ex.getMessage());
             }
         }
 
@@ -897,7 +912,7 @@ public class OSMReader implements DataReader
     /**
      * Stores only osmWayIds which are required for relations
      */
-    private void storeOsmWayID( int edgeId, long osmWayId )
+    protected void storeOsmWayID( int edgeId, long osmWayId )
     {
         if (getOsmWayIdSet().contains(osmWayId))
         {
