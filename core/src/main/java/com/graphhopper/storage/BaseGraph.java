@@ -29,7 +29,6 @@ import com.graphhopper.search.NameIndex;
 import com.graphhopper.util.*;
 import static com.graphhopper.util.Helper.nf;
 import com.graphhopper.util.shapes.BBox;
-import java.io.UnsupportedEncodingException;
 
 /**
  * The base graph handles nodes and edges file format. It can be used with different Directory
@@ -44,10 +43,6 @@ import java.io.UnsupportedEncodingException;
  */
 class BaseGraph implements Graph
 {
-    // Emergency stop. to detect if something went wrong with our storage system and to prevent us from an infinit loop.
-    // Road networks typically do not have nodes with plenty of edges!
-    private static final int MAX_EDGES = 1000;
-
     // edge memory layout not found in EdgeAccess:
     int E_GEO, E_NAME, E_ADDITIONAL;
     /**
@@ -367,7 +362,7 @@ class BaseGraph implements Graph
         extStorage.setSegmentSize(bytes);
     }
 
-    void freeze()
+    synchronized void freeze()
     {
         if (isFrozen())
             throw new IllegalStateException("base graph already frozen");
@@ -376,7 +371,7 @@ class BaseGraph implements Graph
         listener.freeze();
     }
 
-    boolean isFrozen()
+    synchronized boolean isFrozen()
     {
         return frozen;
     }

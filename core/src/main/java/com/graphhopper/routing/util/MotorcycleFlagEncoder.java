@@ -37,6 +37,11 @@ public class MotorcycleFlagEncoder extends CarFlagEncoder
     private final HashSet<String> avoidSet = new HashSet<String>();
     private final HashSet<String> preferSet = new HashSet<String>();
 
+    public MotorcycleFlagEncoder()
+    {
+        this(5, 5, 0);
+    }
+
     public MotorcycleFlagEncoder( PMap properties )
     {
         this(
@@ -123,7 +128,7 @@ public class MotorcycleFlagEncoder extends CarFlagEncoder
         shift += reverseSpeedEncoder.getBits();
 
         priorityWayEncoder = new EncodedValue("PreferWay", shift, 3, 1, 3, 7);
-        shift += reverseSpeedEncoder.getBits();
+        shift += priorityWayEncoder.getBits();
 
         return shift;
     }
