@@ -35,6 +35,8 @@ import static com.graphhopper.util.Helper.keepIn;
  */
 public class BikeGenericFlagEncoder extends AbstractFlagEncoder
 {
+
+    private final DistanceCalc distCalc = Helper.DIST_EARTH;
     /**
      * Reports wether this edge is unpaved.
      */
@@ -175,9 +177,9 @@ public class BikeGenericFlagEncoder extends AbstractFlagEncoder
         setWayTypeSpeed(WayType.TRACK_EASY.getValue(), 14);
         setWayTypeSpeed(WayType.TRACK_MIDDLE.getValue(), 12);
         setWayTypeSpeed(WayType.TRACK_HARD.getValue(), 8);
-        setWayTypeSpeed(WayType.PATH_EASY.getValue(), 10);
-        setWayTypeSpeed(WayType.PATH_MIDDLE.getValue(), 8);
-        setWayTypeSpeed(WayType.PATH_HARD.getValue(), 6);
+        setWayTypeSpeed(WayType.PATH_EASY.getValue(), 8);
+        setWayTypeSpeed(WayType.PATH_MIDDLE.getValue(), 6);
+        setWayTypeSpeed(WayType.PATH_HARD.getValue(), 4);
         setWayTypeSpeed(WayType.CYCLEWAY.getValue(), 16);
         setWayTypeSpeed(WayType.PUSHING_SECTION.getValue(), PUSHING_SECTION_SPEED);
 
@@ -218,7 +220,7 @@ public class BikeGenericFlagEncoder extends AbstractFlagEncoder
 
         setCyclingNetworkPreference("deprecated", PriorityCode.AVOID_AT_ALL_COSTS.getValue());
 
-        setAvoidSpeedLimit(71);
+        setAvoidSpeedLimit(81);
     }
 
     @Override
@@ -671,7 +673,7 @@ public class BikeGenericFlagEncoder extends AbstractFlagEncoder
             // For the reverse speed this has to be the opposite but again keeping in mind that up+down difference.
             double incEleSum = 0, incDist2DSum = 0;
             double decEleSum = 0, decDist2DSum = 0;
-            // double prevLat = pl.getLatitude(0), prevLon = pl.getLongitude(0);
+            double prevLat = pl.getLatitude(0), prevLon = pl.getLongitude(0);
             double prevEle = pl.getElevation(0);
             double fullDist2D = edge.getDistance();
 
@@ -684,7 +686,7 @@ public class BikeGenericFlagEncoder extends AbstractFlagEncoder
             if (fullDist2D < 1)
                 return;
 
-            double eleDelta = pl.getElevation(pl.size() - 1) - prevEle;
+            /*double eleDelta = pl.getElevation(pl.size() - 1) - prevEle;
             if (eleDelta >= 0)
             {
                 incEleSum = eleDelta;
@@ -693,30 +695,30 @@ public class BikeGenericFlagEncoder extends AbstractFlagEncoder
             {
                 decEleSum = -eleDelta;
                 decDist2DSum = fullDist2D;
-            }
+            }*/
 
 //            // get a more detailed elevation information, but due to bad SRTM data this does not make sense now.
-//            for (int i = 1; i < pl.size(); i++)
-//            {
-//                double lat = pl.getLatitude(i);
-//                double lon = pl.getLongitude(i);
-//                double ele = pl.getElevation(i);
-//                double eleDelta = ele - prevEle;
-//                double dist2D = distCalc.calcDist(prevLat, prevLon, lat, lon);
-//                if (eleDelta > 0.1)
-//                {
-//                    incEleSum += eleDelta;
-//                    incDist2DSum += dist2D;
-//                } else if (eleDelta < -0.1)
-//                {
-//                    decEleSum += -eleDelta;
-//                    decDist2DSum += dist2D;
-//                }
-//                fullDist2D += dist2D;
-//                prevLat = lat;
-//                prevLon = lon;
-//                prevEle = ele;
-//            }
+            for (int i = 1; i < pl.size(); i++)
+            {
+                double lat = pl.getLatitude(i);
+                double lon = pl.getLongitude(i);
+                double ele = pl.getElevation(i);
+                double eleDelta = ele - prevEle;
+                double dist2D = distCalc.calcDist(prevLat, prevLon, lat, lon);
+                if (eleDelta >= 0)
+                {
+                    incEleSum += eleDelta;
+                    incDist2DSum += dist2D;
+                } else if (eleDelta < 0)
+                {
+                    decEleSum += -eleDelta;
+                    decDist2DSum += dist2D;
+                }
+                fullDist2D += dist2D;
+                prevLat = lat;
+                prevLon = lon;
+                prevEle = ele;
+            }
             // Calculate slop via tan(asin(height/distance)) but for rather smallish angles where we can assume tan a=a and sin a=a.
             // Then calculate a factor which decreases or increases the speed.
             // Do this via a simple quadratic equation where y(0)=1 and y(0.3)=1/4 for incline and y(0.3)=2 for decline
@@ -749,6 +751,8 @@ public class BikeGenericFlagEncoder extends AbstractFlagEncoder
                 return declineSlopeEncoder.getDoubleValue(flags);
             case DynamicWeighting.INC_DIST_PERCENTAGE_KEY:
                 return inclineDistancePercentageEncoder.getDoubleValue(flags);
+            case DynamicWeighting.WAY_TYPE_KEY:
+                return wayTypeEncoder.getValue(flags);
             default:
                 return super.getDouble(flags, key);
         }

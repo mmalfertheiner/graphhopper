@@ -45,6 +45,7 @@ public class DynamicWeighting implements Weighting
     public static final int INC_SLOPE_KEY = 102;
     public static final int DEC_SLOPE_KEY = 103;
     public static final int INC_DIST_PERCENTAGE_KEY = 104;
+    public static final int WAY_TYPE_KEY = 105;
 
 
     public DynamicWeighting(FlagEncoder encoder, PMap pMap)
@@ -87,7 +88,6 @@ public class DynamicWeighting implements Weighting
         double incElevation = flagEncoder.getDouble(edgeState.getFlags(), DynamicWeighting.INC_SLOPE_KEY) / 100;
         double decElevation = flagEncoder.getDouble(edgeState.getFlags(), DynamicWeighting.DEC_SLOPE_KEY) / 100;
         double incDistPercentage = flagEncoder.getDouble(edgeState.getFlags(), DynamicWeighting.INC_DIST_PERCENTAGE_KEY) / 100;
-
 
         double incDist2DSum = edgeState.getDistance() * incDistPercentage;
         double decDist2DSum = edgeState.getDistance() - incDist2DSum;
