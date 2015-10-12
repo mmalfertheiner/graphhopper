@@ -895,7 +895,6 @@ public class OSMReader implements DataReader
             towerNodeDistance = 1;
         }
 
-        //TODO add incline and decline
         EdgeIteratorState iter = graph.edge(fromIndex, toIndex).setDistance(towerNodeDistance).setFlags(flags);
 
         if (nodes > 2)

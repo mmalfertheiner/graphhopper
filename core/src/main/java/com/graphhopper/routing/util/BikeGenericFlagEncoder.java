@@ -49,7 +49,6 @@ public class BikeGenericFlagEncoder extends AbstractFlagEncoder
     protected final Set<String> avoidHighwayTags = new HashSet<String>();
 
     protected final Set<String> pavedSurfaceTags = new HashSet<String>();
-    protected final Set<String> semipavedSurfaceTags = new HashSet<String>();
     protected final Set<String> unpavedSurfaceTags = new HashSet<String>();
 
     //private final Map<String, Integer> trackTypeSpeeds = new HashMap<String, Integer>();
@@ -59,7 +58,7 @@ public class BikeGenericFlagEncoder extends AbstractFlagEncoder
     private final Map<String, Integer> bikeNetworkToCode = new HashMap<String, Integer>();
     protected EncodedValue relationCodeEncoder;
     protected EncodedValue wayTypeEncoder;
-    EncodedValue priorityWayEncoder;
+    //EncodedValue priorityWayEncoder;
     protected EncodedDoubleValue inclineSlopeEncoder;
     protected EncodedDoubleValue declineSlopeEncoder;
     protected EncodedDoubleValue inclineDistancePercentageEncoder;
@@ -130,17 +129,15 @@ public class BikeGenericFlagEncoder extends AbstractFlagEncoder
         pavedSurfaceTags.add("concrete:lanes");
         pavedSurfaceTags.add("concrete:plates");
 
-        //Semi paved -> still good underground but should be avoided for racing bikes
-        semipavedSurfaceTags.add("sett");
-        semipavedSurfaceTags.add("cobblestone");
-        semipavedSurfaceTags.add("cobblestone:flattened");
-        semipavedSurfaceTags.add("paving_stones");
-        semipavedSurfaceTags.add("paving_stones:30");
-        semipavedSurfaceTags.add("compacted");
-        semipavedSurfaceTags.add("grass_paver");
-        semipavedSurfaceTags.add("wood");
-
-        //Unpaved -> only for mtb
+        //Unpaved surface -> should be avoided for racing bikes
+        unpavedSurfaceTags.add("sett");
+        unpavedSurfaceTags.add("cobblestone");
+        unpavedSurfaceTags.add("cobblestone:flattened");
+        unpavedSurfaceTags.add("paving_stones");
+        unpavedSurfaceTags.add("paving_stones:30");
+        unpavedSurfaceTags.add("compacted");
+        unpavedSurfaceTags.add("grass_paver");
+        unpavedSurfaceTags.add("wood");
         unpavedSurfaceTags.add("unpaved");
         unpavedSurfaceTags.add("gravel");
         unpavedSurfaceTags.add("ground");
@@ -158,13 +155,21 @@ public class BikeGenericFlagEncoder extends AbstractFlagEncoder
         setSurfaceSpeedFactor("concrete:lanes", 0.9f);
         setSurfaceSpeedFactor("concrete:plates", 0.9f);
         setSurfaceSpeedFactor("metal", 0.9f);
-        setSurfaceSpeedFactor("cobblestone", 0.8f);
-        setSurfaceSpeedFactor("cobblestone:flattened", 0.9f);
-        setSurfaceSpeedFactor("grass", 0.9f);
-        setSurfaceSpeedFactor("grass_paver", 0.9f);
+
+        setSurfaceSpeedFactor("cobblestone", 1.2f);
+        setSurfaceSpeedFactor("cobblestone:flattened", 1.2f);
+        setSurfaceSpeedFactor("paving_stones", 1.2f);
+        setSurfaceSpeedFactor("paving_stones:30", 1.2f);
+        setSurfaceSpeedFactor("compacted", 1.2f);
+
+        setSurfaceSpeedFactor("dirt", 0.8f);
+        setSurfaceSpeedFactor("earth", 0.8f);
+        setSurfaceSpeedFactor("grass", 0.8f);
+        setSurfaceSpeedFactor("grass_paver", 0.8f);
         setSurfaceSpeedFactor("salt", 0.8f);
         setSurfaceSpeedFactor("sand", 0.8f);
         setSurfaceSpeedFactor("ice", 0.5f);
+        setSurfaceSpeedFactor("mud", 0.6f);
 
         setWayTypeSpeed(WayType.PRIMARY_ROAD.getValue(), 18);
         setWayTypeSpeed(WayType.SECONDARY_ROAD.getValue(), 18);
@@ -172,7 +177,6 @@ public class BikeGenericFlagEncoder extends AbstractFlagEncoder
         setWayTypeSpeed(WayType.UNCLASSIFIED_PAVED.getValue(), 18);
         setWayTypeSpeed(WayType.UNCLASSIFIED_UNPAVED.getValue(), 12);
         setWayTypeSpeed(WayType.SMALL_WAY_PAVED.getValue(), 18);
-        setWayTypeSpeed(WayType.SMALL_WAY_SEMI_PAVED.getValue(), 14);
         setWayTypeSpeed(WayType.SMALL_WAY_UNPAVED.getValue(), 10);
         setWayTypeSpeed(WayType.TRACK_EASY.getValue(), 14);
         setWayTypeSpeed(WayType.TRACK_MIDDLE.getValue(), 12);
@@ -181,6 +185,7 @@ public class BikeGenericFlagEncoder extends AbstractFlagEncoder
         setWayTypeSpeed(WayType.PATH_MIDDLE.getValue(), 6);
         setWayTypeSpeed(WayType.PATH_HARD.getValue(), 4);
         setWayTypeSpeed(WayType.CYCLEWAY.getValue(), 16);
+        setWayTypeSpeed(WayType.MTB_CYCLEWAY.getValue(), 14);
         setWayTypeSpeed(WayType.PUSHING_SECTION.getValue(), PUSHING_SECTION_SPEED);
 
 
@@ -212,13 +217,13 @@ public class BikeGenericFlagEncoder extends AbstractFlagEncoder
         avoidHighwayTags.add("motorway");
         avoidHighwayTags.add("motorway_link");
 
-        setCyclingNetworkPreference("icn", PriorityCode.BEST.getValue());
-        setCyclingNetworkPreference("ncn", PriorityCode.BEST.getValue());
-        setCyclingNetworkPreference("rcn", PriorityCode.VERY_NICE.getValue());
-        setCyclingNetworkPreference("lcn", PriorityCode.PREFER.getValue());
+        /*setCyclingNetworkPreference("icn", 1);
+        setCyclingNetworkPreference("ncn", 2);
+        setCyclingNetworkPreference("rcn", 3);
+        setCyclingNetworkPreference("lcn", 4);
         setCyclingNetworkPreference("mtb", PriorityCode.UNCHANGED.getValue());
 
-        setCyclingNetworkPreference("deprecated", PriorityCode.AVOID_AT_ALL_COSTS.getValue());
+        setCyclingNetworkPreference("deprecated", PriorityCode.AVOID_AT_ALL_COSTS.getValue());*/
 
         setAvoidSpeedLimit(81);
     }
@@ -243,8 +248,8 @@ public class BikeGenericFlagEncoder extends AbstractFlagEncoder
         shift += wayTypeEncoder.getBits();
 
         // 3 bits to store preference on specific ways
-        priorityWayEncoder = new EncodedValue("PreferWay", shift, 3, 1, 0, 7);
-        shift += priorityWayEncoder.getBits();
+        //priorityWayEncoder = new EncodedValue("PreferWay", shift, 3, 1, 0, 7);
+        //shift += priorityWayEncoder.getBits();
 
         // 6 bits to store incline
         inclineSlopeEncoder = new EncodedDoubleValue("InclineSlope", shift, 6, 1, 0, 40, true);
@@ -352,19 +357,37 @@ public class BikeGenericFlagEncoder extends AbstractFlagEncoder
     @Override
     public long handleRelationTags( OSMRelation relation, long oldRelationFlags )
     {
-        int code = 0;
+        int code = -1;
         if (relation.hasTag("route", "bicycle"))
         {
-            Integer val = bikeNetworkToCode.get(relation.getTag("network"));
-            if (val != null)
-                code = val;
+            String network = relation.getTag("network");
+
+            if(network == null)
+                code = BicycleNetworkCode.UNCLASSIFIED.getValue();
+            else {
+                if (network.equalsIgnoreCase("icn"))
+                    code = BicycleNetworkCode.INTERNATIONAL_CYCLING_NETWORK.getValue();
+                else if (network.equalsIgnoreCase("ncn"))
+                    code = BicycleNetworkCode.NATIONAL_CYCLING_NETWORK.getValue();
+                else if (network.equalsIgnoreCase("rcn"))
+                    code = BicycleNetworkCode.REGIONAL_CYCLING_ROUTES.getValue();
+                else if (network.equalsIgnoreCase("lcn"))
+                    code = BicycleNetworkCode.LOCAL_CYCLING_ROUTES.getValue();
+                else if (network.equalsIgnoreCase("mtb"))
+                    code = BicycleNetworkCode.MOUNTAIN_BIKE_ROUTE.getValue();
+                else if (network.equalsIgnoreCase("deprecated"))
+                    code = BicycleNetworkCode.DEPRECATED.getValue();
+            }
+
+        } else if (relation.hasTag("route" ,"mtb"))
+        {
+            code = BicycleNetworkCode.MOUNTAIN_BIKE_ROUTE.getValue();
         } else if (relation.hasTag("route", "ferry"))
         {
-            code = PriorityCode.AVOID_IF_POSSIBLE.getValue();
+            code = BicycleNetworkCode.FERRY.getValue();
         }
 
-        int oldCode = (int) relationCodeEncoder.getValue(oldRelationFlags);
-        if (oldCode < code)
+        if (code >= 0)
             return relationCodeEncoder.setValue(0, code);
         return oldRelationFlags;
     }
@@ -378,7 +401,7 @@ public class BikeGenericFlagEncoder extends AbstractFlagEncoder
         long encoded = 0;
         if (!isFerry(allowed))
         {
-            encoded = handleBikeRelated(way, encoded, relationFlags > UNCHANGED.getValue());
+            encoded = handleBikeRelated(way, encoded, relationFlags);
 
             double speed = getSpeed(way, encoded);
 
@@ -400,11 +423,11 @@ public class BikeGenericFlagEncoder extends AbstractFlagEncoder
                     getWayTypeSpeed(WayType.PRIMARY_ROAD.getValue()));
             encoded |= directionBitMask;
         }
-        int priorityFromRelation = 0;
+        /*int priorityFromRelation = 0;
         if (relationFlags != 0)
             priorityFromRelation = (int) relationCodeEncoder.getValue(relationFlags);
 
-        encoded = priorityWayEncoder.setValue(encoded, handlePriority(way, priorityFromRelation));
+        encoded = priorityWayEncoder.setValue(encoded, handlePriority(way, priorityFromRelation));*/
         return encoded;
     }
 
@@ -585,7 +608,7 @@ public class BikeGenericFlagEncoder extends AbstractFlagEncoder
     /**
      * Handle surface and wayType encoding
      */
-    long handleBikeRelated( OSMWay way, long encoded, boolean partOfCycleRelation )
+    long handleBikeRelated( OSMWay way, long encoded, long partOfCycleRelation )
     {
         String surfaceTag = way.getTag("surface");
         String highway = way.getTag("highway");
@@ -598,7 +621,7 @@ public class BikeGenericFlagEncoder extends AbstractFlagEncoder
         WayType wayType = WayType.SMALL_WAY_PAVED;
         boolean isPushingSection = isPushingSection(way);
 
-        if (isPushingSection && !partOfCycleRelation || "steps".equals(highway) || "ice".equals(surfaceTag))
+        if (isPushingSection && !(partOfCycleRelation > BicycleNetworkCode.FERRY.getValue()) || "steps".equals(highway) || "ice".equals(surfaceTag))
             wayType = WayType.PUSHING_SECTION;
         else if ("primary".equals(highway) || "primary_link".equals(highway))
             wayType = WayType.PRIMARY_ROAD;
@@ -616,36 +639,32 @@ public class BikeGenericFlagEncoder extends AbstractFlagEncoder
 
             if(unpavedSurfaceTags.contains(surfaceTag))
                 wayType = WayType.SMALL_WAY_UNPAVED;
-            else if (semipavedSurfaceTags.contains(surfaceTag))
-                wayType = WayType.SMALL_WAY_SEMI_PAVED;
             else
                 wayType = WayType.SMALL_WAY_PAVED;
         }
         else if ("track".equals(highway)) {
             if(("grade4".equals(trackType) || "grade5".equals(trackType)) && (surfaceTag == null || !pavedSurfaceTags.contains(surfaceTag)))
                 wayType = WayType.TRACK_HARD;
-            else if (("grade2".equals(trackType) || "grade3".equals(trackType)) && (surfaceTag == null || !pavedSurfaceTags.contains(surfaceTag)))
+            else if (("grade2".equals(trackType) || "grade3".equals(trackType)) && (surfaceTag == null || !pavedSurfaceTags.contains(surfaceTag) && !way.hasTag("bicycle", intendedValues)))
                 wayType = WayType.TRACK_MIDDLE;
             else
                 wayType = WayType.TRACK_EASY;
         }
         else if ("path".equals(highway)) {
-            if("horrible".equals(smoothness) || "very_horrible".equals(smoothness) || "mountainhiking".equals(sacScale) || "4".equals(mtbScale) || "5".equals(mtbScale))
+            if("horrible".equals(smoothness) || "very_horrible".equals(smoothness) || "mountain_hiking".equals(sacScale) || "4".equals(mtbScale) || "5".equals(mtbScale))
                 wayType = WayType.PATH_HARD;
-            else if("bad".equals(smoothness) || "very_bad".equals(smoothness) || "hiking".equals(sacScale) || "1".equals(mtbScale) || "3".equals(mtbScale) && !pavedSurfaceTags.contains(surfaceTag))
+            else if("bad".equals(smoothness) || "very_bad".equals(smoothness) || "hiking".equals(sacScale) || "1".equals(mtbScale) || "3".equals(mtbScale) && !pavedSurfaceTags.contains(surfaceTag) && !way.hasTag("bicycle", intendedValues))
                 wayType = WayType.PATH_MIDDLE;
             else
                 wayType = WayType.PATH_EASY;
         }
 
-        if (way.hasTag("bicycle", intendedValues))
+        if(partOfCycleRelation == BicycleNetworkCode.MOUNTAIN_BIKE_ROUTE.getValue()){
+            wayType = WayType.MTB_CYCLEWAY;
+        } else if ("cycleway".equals(highway) || (partOfCycleRelation > BicycleNetworkCode.FERRY.getValue()))
         {
-            if (isPushingSection && !way.hasTag("bicycle", "designated"))
-                wayType = WayType.SMALL_WAY_PAVED;
-            else
-                wayType = WayType.CYCLEWAY;
-        } else if ("cycleway".equals(highway))
             wayType = WayType.CYCLEWAY;
+        }
 
         return wayTypeEncoder.setValue(encoded, wayType.getValue());
     }
@@ -743,8 +762,8 @@ public class BikeGenericFlagEncoder extends AbstractFlagEncoder
     {
         switch (key)
         {
-            case DynamicWeighting.PRIORITY_KEY:
-                return (double) priorityWayEncoder.getValue(flags) / BEST.getValue();
+            //case DynamicWeighting.PRIORITY_KEY:
+            //return (double) priorityWayEncoder.getValue(flags) / BEST.getValue();
             case DynamicWeighting.INC_SLOPE_KEY:
                 return inclineSlopeEncoder.getDoubleValue(flags);
             case DynamicWeighting.DEC_SLOPE_KEY:
@@ -803,15 +822,15 @@ public class BikeGenericFlagEncoder extends AbstractFlagEncoder
         UNCLASSIFIED_PAVED(3),
         UNCLASSIFIED_UNPAVED(4),
         SMALL_WAY_PAVED(5),
-        SMALL_WAY_SEMI_PAVED(6),
-        SMALL_WAY_UNPAVED(7),
-        TRACK_EASY(8),
-        TRACK_MIDDLE(9),
-        TRACK_HARD(10),
-        PATH_EASY(11),
-        PATH_MIDDLE(12),
-        PATH_HARD(13),
-        CYCLEWAY(14),
+        SMALL_WAY_UNPAVED(6),
+        TRACK_EASY(7),
+        TRACK_MIDDLE(8),
+        TRACK_HARD(9),
+        PATH_EASY(10),
+        PATH_MIDDLE(11),
+        PATH_HARD(12),
+        CYCLEWAY(13),
+        MTB_CYCLEWAY(14),
         PUSHING_SECTION(15);
 
         private final int value;
@@ -874,8 +893,6 @@ public class BikeGenericFlagEncoder extends AbstractFlagEncoder
     public double getWayType( long flags) {
         return this.wayTypeEncoder.getValue(flags);
     }
-
-    public double getPriorityValue ( long flags) { return this.priorityWayEncoder.getValue(flags); }
 
     @Override
     public String toString()
