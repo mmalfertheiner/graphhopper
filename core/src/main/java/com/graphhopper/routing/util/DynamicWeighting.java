@@ -80,7 +80,7 @@ public class DynamicWeighting implements Weighting
         if (penalizeEdge)
             time += heading_penalty;
 
-        return time / (0.5 + getUserPreference(edgeState));
+        return time / (Math.pow(0.5 + getUserPreference(edgeState), 2));
     }
 
     private double getUserPreference(EdgeIteratorState edgeState) {
@@ -98,7 +98,7 @@ public class DynamicWeighting implements Weighting
 
             priority = PriorityCode.AVOID_IF_POSSIBLE.getValue();
 
-            if(incDist2DSum > 50 && incElevation > 0.02) {
+            if(incDist2DSum > 10 && incElevation > 0.02) {
                 priority = PriorityCode.AVOID_AT_ALL_COSTS.getValue();
                 //System.out.println(wayType + ": elevation: " + incElevation + ": " + incDist2DSum);
 
@@ -106,8 +106,10 @@ public class DynamicWeighting implements Weighting
                     priority = PriorityCode.WORST.getValue();
                 }
             }
-        } else if (wayType >= 1 && wayType <= 6){
+        } else if (wayType >= 2 && wayType <= 6){
             priority = PriorityCode.PREFER.getValue();
+        } else if (wayType == 15){
+            priority = PriorityCode.WORST.getValue();
         }
 
         return priority / PriorityCode.BEST.getValue();
@@ -128,15 +130,15 @@ public class DynamicWeighting implements Weighting
         if (!reverse)
         {
             // use weighted mean so that longer incline infuences speed more than shorter
-            double fwdFaster = 1 + 2 * keepIn(decElevation, 0, 0.2);
-            fwdFaster = fwdFaster * fwdFaster;
-            double fwdSlower = 1 - 3 * keepIn(incElevation, 0, 0.33);
+            double fwdFaster = 1 + 30 * keepIn(decElevation, 0, 0.1);
+            fwdFaster = Math.sqrt(fwdFaster);
+            double fwdSlower = 1 - 5 * keepIn(incElevation, 0, 0.2);
             fwdSlower = fwdSlower * fwdSlower;
             adjustedSpeed = keepIn(speed * (fwdSlower * incDist2DSum + fwdFaster * decDist2DSum) / edgeState.getDistance(), BikeGenericFlagEncoder.PUSHING_SECTION_SPEED / 2, 50);
         } else {
-            double fwdFaster = 1 + 2 * keepIn(incElevation, 0, 0.2);
-            fwdFaster = fwdFaster * fwdFaster;
-            double fwdSlower = 1 - 3 * keepIn(decElevation, 0, 0.33);
+            double fwdFaster = 1 + 30 * keepIn(incElevation, 0, 0.1);
+            fwdFaster = Math.sqrt(fwdFaster);
+            double fwdSlower = 1 - 5 * keepIn(decElevation, 0, 0.2);
             fwdSlower = fwdSlower * fwdSlower;
             adjustedSpeed = keepIn(speed * (fwdSlower * decDist2DSum + fwdFaster * incDist2DSum) / edgeState.getDistance(), BikeGenericFlagEncoder.PUSHING_SECTION_SPEED / 2, 50);
         }

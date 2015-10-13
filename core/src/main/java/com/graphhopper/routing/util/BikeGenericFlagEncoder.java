@@ -694,29 +694,9 @@ public class BikeGenericFlagEncoder extends AbstractFlagEncoder
             double decEleSum = 0, decDist2DSum = 0;
             double prevLat = pl.getLatitude(0), prevLon = pl.getLongitude(0);
             double prevEle = pl.getElevation(0);
-            double fullDist2D = edge.getDistance();
+            double fullDist2D = 0;
 
-            if (Double.isInfinite(fullDist2D))
-            {
-                System.err.println("infinity distance? for way:" + way.getId());
-                return;
-            }
-            // for short edges an incline makes no sense and for 0 distances could lead to NaN values for speed, see #432
-            if (fullDist2D < 1)
-                return;
-
-            /*double eleDelta = pl.getElevation(pl.size() - 1) - prevEle;
-            if (eleDelta >= 0)
-            {
-                incEleSum = eleDelta;
-                incDist2DSum = fullDist2D;
-            } else if (eleDelta < 0)
-            {
-                decEleSum = -eleDelta;
-                decDist2DSum = fullDist2D;
-            }*/
-
-//            // get a more detailed elevation information, but due to bad SRTM data this does not make sense now.
+            // get a more detailed elevation information, but due to bad SRTM data this does not make sense now.
             for (int i = 1; i < pl.size(); i++)
             {
                 double lat = pl.getLatitude(i);
@@ -741,6 +721,16 @@ public class BikeGenericFlagEncoder extends AbstractFlagEncoder
             // Calculate slop via tan(asin(height/distance)) but for rather smallish angles where we can assume tan a=a and sin a=a.
             // Then calculate a factor which decreases or increases the speed.
             // Do this via a simple quadratic equation where y(0)=1 and y(0.3)=1/4 for incline and y(0.3)=2 for decline
+
+            if (Double.isInfinite(fullDist2D))
+            {
+                System.err.println("infinity distance? for way:" + way.getId());
+                return;
+            }
+
+            // for short edges an incline makes no sense and for 0 distances could lead to NaN values for speed, see #432
+            if (fullDist2D < 1)
+                return;
 
             fwdIncline = incDist2DSum > 1 ? (incEleSum / incDist2DSum) * 100 : 0;
             fwdDecline = decDist2DSum > 1 ? (decEleSum / decDist2DSum) * 100 : 0;

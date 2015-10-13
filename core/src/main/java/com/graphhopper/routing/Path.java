@@ -419,19 +419,21 @@ public class Path
         if (!reverse)
         {
             // use weighted mean so that longer incline infuences speed more than shorter
-            double fwdFaster = 1 + 2 * keepIn(decElevation, 0, 0.2);
-            fwdFaster = fwdFaster * fwdFaster;
+            double fwdFaster = 1 + 30 * keepIn(decElevation, 0, 0.1);
+            fwdFaster = Math.sqrt(fwdFaster);
             double fwdSlower = 1 - 5 * keepIn(incElevation, 0, 0.2);
             fwdSlower = fwdSlower * fwdSlower;
             adjustedSpeed = keepIn(speed * (fwdSlower * incDist2DSum + fwdFaster * decDist2DSum) / edgeState.getDistance(), BikeGenericFlagEncoder.PUSHING_SECTION_SPEED / 2, 50);
         } else {
-            double fwdFaster = 1 + 2 * keepIn(incElevation, 0, 0.2);
-            fwdFaster = fwdFaster * fwdFaster;
+            double fwdFaster = 1 + 30 * keepIn(incElevation, 0, 0.1);
+            fwdFaster = Math.sqrt(fwdFaster);
             double fwdSlower = 1 - 5 * keepIn(decElevation, 0, 0.2);
             fwdSlower = fwdSlower * fwdSlower;
             adjustedSpeed = keepIn(speed * (fwdSlower * decDist2DSum + fwdFaster * incDist2DSum) / edgeState.getDistance(), BikeGenericFlagEncoder.PUSHING_SECTION_SPEED / 2, 50);
         }
-        System.out.println("NEW SPEED: " + Helper.round2(adjustedSpeed) + ", SPEED: " + speed + ", INC ELE: " + incElevation + ", DEC ELE: " + decElevation + ", PERCENTAGE: " + incDistPercentage);
+        System.out.println("NEW SPEED: " + Helper.round2(adjustedSpeed) + ", SPEED: " + speed + ", INC ELE: " + incElevation +
+                ", DEC ELE: " + decElevation + ", PERCENTAGE: " + incDistPercentage +
+                ", INC DIST: " + incDist2DSum + ", DEC DIST: " + decDist2DSum);
 
         return adjustedSpeed;
     }
