@@ -80,7 +80,7 @@ public class DynamicWeighting implements Weighting
         if (penalizeEdge)
             time += heading_penalty;
 
-        return time / (Math.pow(0.5 + getUserPreference(edgeState), 2));
+        return time / (0.5 + getUserPreference(edgeState));
     }
 
     private double getUserPreference(EdgeIteratorState edgeState) {
@@ -112,7 +112,7 @@ public class DynamicWeighting implements Weighting
             priority = PriorityCode.WORST.getValue();
         }
 
-        return priority / PriorityCode.BEST.getValue();
+        return (double) priority / PriorityCode.BEST.getValue();
 
     }
 
