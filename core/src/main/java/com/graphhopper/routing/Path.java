@@ -229,7 +229,6 @@ public class Path
         double dist = iter.getDistance();
         distance += dist;
         time += calcMillis(dist, iter.getFlags(), false);
-        System.out.println(time);
         addEdge(edgeId);
     }
 

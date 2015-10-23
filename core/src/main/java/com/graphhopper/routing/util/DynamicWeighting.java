@@ -37,6 +37,7 @@ public class DynamicWeighting implements Weighting
     private final double heading_penalty;
     protected final FlagEncoder flagEncoder;
     private final double maxSpeed;
+    private String user = "martin";
 
     /**
      * For now used only in BikeGenericFlagEncoder
@@ -82,6 +83,13 @@ public class DynamicWeighting implements Weighting
 
         return time / (0.5 + getUserPreference(edgeState));
     }
+
+    private double getUserSpeed(EdgeIteratorState edgeState){
+        int wayType = (int) flagEncoder.getDouble(edgeState.getFlags(), DynamicWeighting.WAY_TYPE_KEY);
+
+        return 0;
+    }
+
 
     private double getUserPreference(EdgeIteratorState edgeState) {
 
