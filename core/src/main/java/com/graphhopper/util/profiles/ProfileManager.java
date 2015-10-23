@@ -108,6 +108,10 @@ public class ProfileManager {
 
 
     public RidersProfile getProfile(String name){
+
+        if(name == null || name.equals(""))
+            return null;
+
         if (ridersProfile == null) {
             readProfile(name);
         }

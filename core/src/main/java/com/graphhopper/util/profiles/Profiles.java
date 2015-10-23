@@ -5,7 +5,7 @@ import com.graphhopper.util.profiles.operations.CreateProfileOperation;
 import com.graphhopper.util.profiles.operations.Operation;
 import com.graphhopper.util.profiles.operations.PrintProfileOperation;
 
-public class Main {
+public class Profiles {
 
     public static void main(String[] args) {
 
