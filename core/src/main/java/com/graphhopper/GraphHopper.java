@@ -1110,7 +1110,7 @@ public class GraphHopper implements GraphHopperAPI
             Path path = algo.calcPath(fromQResult.getClosestNode(), toQResult.getClosestNode());
 
             //Update time to profile of user
-            path.updateTime();
+            path.updateTime(request.getHints());
 
             if (path.getTime() < 0)
                 throw new RuntimeException("Time was negative. Please report as bug and include:" + request);
