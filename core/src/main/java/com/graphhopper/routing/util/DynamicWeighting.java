@@ -21,6 +21,10 @@ package com.graphhopper.routing.util;
 import com.graphhopper.util.EdgeIteratorState;
 import com.graphhopper.util.Helper;
 import com.graphhopper.util.PMap;
+import com.graphhopper.util.profiles.ProfileManager;
+import com.graphhopper.util.profiles.RidersProfile;
+
+import java.util.Map;
 
 import static com.graphhopper.util.Helper.keepIn;
 
@@ -36,13 +40,11 @@ public class DynamicWeighting implements Weighting
     final static double DEFAULT_HEADING_PENALTY = 300; //[s]
     private final double heading_penalty;
     protected final FlagEncoder flagEncoder;
-    private final double maxSpeed;
-    private String user = "martin";
+    protected RidersProfile profile;
 
     /**
      * For now used only in BikeGenericFlagEncoder
      */
-    public static final int PRIORITY_KEY = 101;
     public static final int INC_SLOPE_KEY = 102;
     public static final int DEC_SLOPE_KEY = 103;
     public static final int INC_DIST_PERCENTAGE_KEY = 104;
@@ -56,7 +58,9 @@ public class DynamicWeighting implements Weighting
 
         this.flagEncoder = encoder;
         heading_penalty = pMap.getDouble("heading_penalty", DEFAULT_HEADING_PENALTY);
-        maxSpeed = encoder.getMaxSpeed() / SPEED_CONV;
+        String user = pMap.get("profile", "");
+        profile = new ProfileManager().getProfile(user);
+
     }
 
     public DynamicWeighting(FlagEncoder encoder)
@@ -67,12 +71,12 @@ public class DynamicWeighting implements Weighting
     @Override
     public double calcWeight( EdgeIteratorState edgeState, boolean reverse, int prevOrNextEdgeId )
     {
-        double speed = flagEncoder.getSpeed(edgeState.getFlags());
+        SpeedProvider speedProvider = new ProfileSpeedProvider(flagEncoder, profile);
+
+        double speed = speedProvider.calcSpeed(edgeState, reverse);
 
         if (speed == 0)
             return Double.POSITIVE_INFINITY;
-
-        speed = adjustSpeed(speed, edgeState, reverse);
 
         double time = edgeState.getDistance() / speed * SPEED_CONV;
 
@@ -83,13 +87,6 @@ public class DynamicWeighting implements Weighting
 
         return time / (0.5 + getUserPreference(edgeState));
     }
-
-    private double getUserSpeed(EdgeIteratorState edgeState){
-        int wayType = (int) flagEncoder.getDouble(edgeState.getFlags(), DynamicWeighting.WAY_TYPE_KEY);
-
-        return 0;
-    }
-
 
     private double getUserPreference(EdgeIteratorState edgeState) {
 
@@ -124,41 +121,9 @@ public class DynamicWeighting implements Weighting
 
     }
 
-    private double adjustSpeed(double speed, EdgeIteratorState edgeState, boolean reverse) {
-
-        double incElevation = flagEncoder.getDouble(edgeState.getFlags(), DynamicWeighting.INC_SLOPE_KEY) / 100;
-        double decElevation = flagEncoder.getDouble(edgeState.getFlags(), DynamicWeighting.DEC_SLOPE_KEY) / 100;
-        double incDistPercentage = flagEncoder.getDouble(edgeState.getFlags(), DynamicWeighting.INC_DIST_PERCENTAGE_KEY) / 100;
-
-        double incDist2DSum = edgeState.getDistance() * incDistPercentage;
-        double decDist2DSum = edgeState.getDistance() - incDist2DSum;
-
-        double adjustedSpeed = speed;
-
-        if (!reverse)
-        {
-            // use weighted mean so that longer incline infuences speed more than shorter
-            double fwdFaster = 1 + 30 * keepIn(decElevation, 0, 0.1);
-            fwdFaster = Math.sqrt(fwdFaster);
-            double fwdSlower = 1 - 5 * keepIn(incElevation, 0, 0.2);
-            fwdSlower = fwdSlower * fwdSlower;
-            adjustedSpeed = keepIn(speed * (fwdSlower * incDist2DSum + fwdFaster * decDist2DSum) / edgeState.getDistance(), BikeGenericFlagEncoder.PUSHING_SECTION_SPEED / 2, 50);
-        } else {
-            double fwdFaster = 1 + 30 * keepIn(incElevation, 0, 0.1);
-            fwdFaster = Math.sqrt(fwdFaster);
-            double fwdSlower = 1 - 5 * keepIn(decElevation, 0, 0.2);
-            fwdSlower = fwdSlower * fwdSlower;
-            adjustedSpeed = keepIn(speed * (fwdSlower * decDist2DSum + fwdFaster * incDist2DSum) / edgeState.getDistance(), BikeGenericFlagEncoder.PUSHING_SECTION_SPEED / 2, 50);
-        }
-
-        //System.out.println("NEW SPEED: " + Helper.round2(adjustedSpeed) + ", SPEED: " + speed + ", INC ELE: " + incElevation + ", DEC ELE: " + decElevation + ", PERCENTAGE: " + incDistPercentage);
-
-        return adjustedSpeed;
-    }
-
     @Override
     public double getMinWeight(double distance) {
-        return distance / maxSpeed;
+        return distance / flagEncoder.getMaxSpeed();
     }
 
     @Override

@@ -62,6 +62,7 @@ public class InfoServlet extends GHBaseServlet
         {
             JSONObject perVehicleJson = new JSONObject();
             perVehicleJson.put("elevation", hopper.hasElevation());
+            perVehicleJson.put("weighting", getPreferredWeighting(v));
             features.put(v, perVehicleJson);
         }
         json.put("features", features);
@@ -76,5 +77,15 @@ public class InfoServlet extends GHBaseServlet
             json.put("prepare_date", props.get("prepare.date"));
 
         writeJson(req, res, json);
+    }
+
+    private String getPreferredWeighting(String v) {
+
+        String w = "fastest";
+
+        if(v.equalsIgnoreCase("generic_bike"))
+            w = "dynamic";
+
+        return w;
     }
 }

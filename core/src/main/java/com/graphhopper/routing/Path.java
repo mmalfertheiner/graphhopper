@@ -17,14 +17,13 @@
  */
 package com.graphhopper.routing;
 
-import com.graphhopper.routing.util.BikeGenericFlagEncoder;
-import com.graphhopper.routing.util.DefaultEdgeFilter;
-import com.graphhopper.routing.util.DynamicWeighting;
-import com.graphhopper.routing.util.FlagEncoder;
+import com.graphhopper.routing.util.*;
 import com.graphhopper.storage.EdgeEntry;
 import com.graphhopper.storage.Graph;
 import com.graphhopper.storage.NodeAccess;
 import com.graphhopper.util.*;
+import com.graphhopper.util.profiles.ProfileManager;
+import com.graphhopper.util.profiles.RidersProfile;
 import gnu.trove.list.TIntList;
 import gnu.trove.list.array.TIntArrayList;
 
@@ -370,25 +369,29 @@ public class Path
         return points;
     }
 
-    public void updateTime(){
+    public void updateTime(PMap params){
 
         time = 0;
+        String profileName = params.get("profile", "");
+        RidersProfile ridersProfile = null;
+
+        if(!profileName.equals(""))
+            ridersProfile = new ProfileManager().getProfile(profileName);
+
+        final SpeedProvider speedProvider = new ProfileSpeedProvider(encoder, ridersProfile);
 
         forEveryEdge(new EdgeVisitor() {
 
             @Override
             public void next(EdgeIteratorState edgeBase, int index) {
 
-                double speed = encoder.getSpeed(edgeBase.getFlags());
+                double speed = speedProvider.calcSpeed(edgeBase, false);
 
                 if (Double.isInfinite(speed) || Double.isNaN(speed) || speed < 0)
                     throw new IllegalStateException("Invalid speed stored in edge! " + speed);
 
                 if (speed == 0)
                     throw new IllegalStateException("Speed cannot be 0 for unblocked edge, use access properties to mark edge blocked! Should only occur for shortest path calculation. See #242.");
-
-
-                speed = adjustSpeed(speed, edgeBase, false);
 
                 double edgeTime = edgeBase.getDistance() / speed * 3600;
 
@@ -401,40 +404,6 @@ public class Path
             }
         });
 
-    }
-
-    private double adjustSpeed(double speed, EdgeIteratorState edgeState, boolean reverse) {
-
-        double incElevation = encoder.getDouble(edgeState.getFlags(), DynamicWeighting.INC_SLOPE_KEY) / 100;
-        double decElevation = encoder.getDouble(edgeState.getFlags(), DynamicWeighting.DEC_SLOPE_KEY) / 100;
-        double incDistPercentage = encoder.getDouble(edgeState.getFlags(), DynamicWeighting.INC_DIST_PERCENTAGE_KEY) / 100;
-
-
-        double incDist2DSum = edgeState.getDistance() * incDistPercentage;
-        double decDist2DSum = edgeState.getDistance() - incDist2DSum;
-
-        double adjustedSpeed = speed;
-
-        if (!reverse)
-        {
-            // use weighted mean so that longer incline infuences speed more than shorter
-            double fwdFaster = 1 + 30 * keepIn(decElevation, 0, 0.1);
-            fwdFaster = Math.sqrt(fwdFaster);
-            double fwdSlower = 1 - 5 * keepIn(incElevation, 0, 0.2);
-            fwdSlower = fwdSlower * fwdSlower;
-            adjustedSpeed = keepIn(speed * (fwdSlower * incDist2DSum + fwdFaster * decDist2DSum) / edgeState.getDistance(), BikeGenericFlagEncoder.PUSHING_SECTION_SPEED / 2, 50);
-        } else {
-            double fwdFaster = 1 + 30 * keepIn(incElevation, 0, 0.1);
-            fwdFaster = Math.sqrt(fwdFaster);
-            double fwdSlower = 1 - 5 * keepIn(decElevation, 0, 0.2);
-            fwdSlower = fwdSlower * fwdSlower;
-            adjustedSpeed = keepIn(speed * (fwdSlower * decDist2DSum + fwdFaster * incDist2DSum) / edgeState.getDistance(), BikeGenericFlagEncoder.PUSHING_SECTION_SPEED / 2, 50);
-        }
-        System.out.println("NEW SPEED: " + Helper.round2(adjustedSpeed) + ", SPEED: " + speed + ", INC ELE: " + incElevation +
-                ", DEC ELE: " + decElevation + ", PERCENTAGE: " + incDistPercentage +
-                ", INC DIST: " + incDist2DSum + ", DEC DIST: " + decDist2DSum);
-
-        return adjustedSpeed;
     }
 
     /**

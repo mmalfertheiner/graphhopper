@@ -353,5 +353,7 @@ public class CGIARProvider implements ElevationProvider
 
         // 0
         System.out.println(provider.getEle(29.840644, -42.890625));
+
+        System.out.println(provider.getEle(50.477121, 8.051915));
     }
 }

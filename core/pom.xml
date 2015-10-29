@@ -91,6 +91,20 @@
             <version>20140107</version>
             <scope>test</scope>
         </dependency>
+
+        <!-- for using profiles -->
+        <dependency>
+            <groupId>com.graphhopper</groupId>
+            <artifactId>map-matching</artifactId>
+            <!-- or 0.6-SNAPSHOT for the unstable -->
+            <version>0.5.0.0</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-math3</artifactId>
+            <version>3.5</version>
+        </dependency>
         
     </dependencies>
         

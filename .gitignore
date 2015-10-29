@@ -36,3 +36,4 @@ android/.gradle
 .classpath
 .project
 local.properties
+tracks/
