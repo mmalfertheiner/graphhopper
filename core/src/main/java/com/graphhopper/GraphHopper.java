@@ -92,6 +92,7 @@ public class GraphHopper implements GraphHopperAPI
     // for OSM import
     private String osmFile;
     private double osmReaderWayPointMaxDistance = 1;
+    private String smoothingFilter = "";
     private int workerThreads = -1;
     private boolean calcPoints = true;
     // utils
@@ -633,6 +634,7 @@ public class GraphHopper implements GraphHopperAPI
 
         // osm import
         osmReaderWayPointMaxDistance = args.getDouble("osmreader.wayPointMaxDistance", osmReaderWayPointMaxDistance);
+        smoothingFilter = args.get("osmreader.smoothingFilter", smoothingFilter);
 
         workerThreads = args.getInt("osmreader.workerThreads", workerThreads);
         enableInstructions = args.getBool("osmreader.instructions", enableInstructions);
@@ -742,7 +744,8 @@ public class GraphHopper implements GraphHopperAPI
                 setElevationProvider(eleProvider).
                 setWorkerThreads(workerThreads).
                 setEncodingManager(encodingManager).
-                setWayPointMaxDistance(osmReaderWayPointMaxDistance);
+                setWayPointMaxDistance(osmReaderWayPointMaxDistance).
+                setElevationFilter(smoothingFilter);
     }
 
     /**
