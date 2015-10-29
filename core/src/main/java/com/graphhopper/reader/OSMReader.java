@@ -371,7 +371,8 @@ public class OSMReader implements DataReader
             }
 
             //Kalman filter improves quality of elevation data - check for Kalman
-            if(true) {
+            boolean kalman = true;
+            if(kalman) {
 
                 double[] tmpElevations = new double[osmNodeIds.size()];
                 double[] tmpDistances = new double[osmNodeIds.size()-1];
