@@ -150,7 +150,7 @@ public class BikeGenericFlagEncoder extends AbstractFlagEncoder
         unpavedSurfaceTags.add("salt");
         unpavedSurfaceTags.add("sand");
 
-        maxPossibleSpeed = 35;
+        maxPossibleSpeed = 30;
 
         setSurfaceSpeedFactor("concrete:lanes", 0.9f);
         setSurfaceSpeedFactor("concrete:plates", 0.9f);
@@ -198,6 +198,7 @@ public class BikeGenericFlagEncoder extends AbstractFlagEncoder
         acceptedHighwayTags.add("track");
         acceptedHighwayTags.add("service");
         acceptedHighwayTags.add("residential");
+        acceptedHighwayTags.add("unclassified");
         acceptedHighwayTags.add("road");
         acceptedHighwayTags.add("trunk");
         acceptedHighwayTags.add("trunk_link");
@@ -207,6 +208,8 @@ public class BikeGenericFlagEncoder extends AbstractFlagEncoder
         acceptedHighwayTags.add("secondary_link");
         acceptedHighwayTags.add("tertiary");
         acceptedHighwayTags.add("tertiary_link");
+        acceptedHighwayTags.add("trunk");
+        acceptedHighwayTags.add("trunk_link");
         acceptedHighwayTags.add("motorway");
         acceptedHighwayTags.add("motorway_link");
 
@@ -659,7 +662,7 @@ public class BikeGenericFlagEncoder extends AbstractFlagEncoder
 
         if(partOfCycleRelation == BicycleNetworkCode.MOUNTAIN_BIKE_ROUTE.getValue()){
             wayType = WayType.MTB_CYCLEWAY;
-        } else if ("cycleway".equals(highway) || (partOfCycleRelation > BicycleNetworkCode.FERRY.getValue()))
+        } else if ("cycleway".equals(highway) || way.hasTag("bicycle", "designated") || (partOfCycleRelation > BicycleNetworkCode.FERRY.getValue()))
         {
             wayType = WayType.CYCLEWAY;
         }
@@ -865,7 +868,7 @@ public class BikeGenericFlagEncoder extends AbstractFlagEncoder
         if (super.supports(feature))
             return true;
 
-        return PriorityWeighting.class.isAssignableFrom(feature);
+        return DynamicWeighting.class.isAssignableFrom(feature);
     }
 
     public void setAvoidSpeedLimit( int limit )
@@ -885,6 +888,6 @@ public class BikeGenericFlagEncoder extends AbstractFlagEncoder
     @Override
     public String toString()
     {
-        return "generic_bike";
+        return "genbike";
     }
 }
