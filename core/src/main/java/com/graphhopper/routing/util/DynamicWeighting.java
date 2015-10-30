@@ -97,7 +97,9 @@ public class DynamicWeighting implements Weighting
         double incDistPercentage = flagEncoder.getDouble(edgeState.getFlags(), DynamicWeighting.INC_DIST_PERCENTAGE_KEY) / 100;
         double incDist2DSum = edgeState.getDistance() * incDistPercentage;
 
-        if(wayType == 13 || wayType == 14)
+        if(wayType == 0)
+            priority = PriorityCode.AVOID_AT_ALL_COSTS.getValue();
+        else if(wayType == 13 || wayType == 14)
             priority = PriorityCode.BEST.getValue();
         else if(wayType >= 10 && wayType <= 12) {
 
