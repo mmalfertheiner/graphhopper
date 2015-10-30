@@ -85,7 +85,7 @@ public class DynamicWeighting implements Weighting
         if (penalizeEdge)
             time += heading_penalty;
 
-        return time / (0.5 + getUserPreference(edgeState));
+        return time / (0.5 + Math.pow(getUserPreference(edgeState), 2));
     }
 
     private double getUserPreference(EdgeIteratorState edgeState) {
@@ -101,18 +101,17 @@ public class DynamicWeighting implements Weighting
             priority = PriorityCode.AVOID_AT_ALL_COSTS.getValue();
         else if(wayType == 13 || wayType == 14)
             priority = PriorityCode.BEST.getValue();
-        else if(wayType >= 10 && wayType <= 12) {
+        else if(wayType == 10) {
 
-            priority = PriorityCode.AVOID_IF_POSSIBLE.getValue();
+            priority = PriorityCode.REACH_DEST.getValue();
 
             if(incDist2DSum > 10 && incElevation > 0.02) {
-                priority = PriorityCode.AVOID_AT_ALL_COSTS.getValue();
-                //System.out.println(wayType + ": elevation: " + incElevation + ": " + incDist2DSum);
-
-                if(incElevation > 0.1){
-                    priority = PriorityCode.WORST.getValue();
-                }
+                priority = PriorityCode.WORST.getValue();
             }
+
+        } else if (wayType == 11 || wayType == 12) {
+            //Should be considered only for Downhill racers
+            priority = PriorityCode.WORST.getValue();
         } else if (wayType >= 2 && wayType <= 6){
             priority = PriorityCode.PREFER.getValue();
         } else if (wayType == 15){

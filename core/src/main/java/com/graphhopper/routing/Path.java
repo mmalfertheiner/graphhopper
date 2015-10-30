@@ -228,6 +228,10 @@ public class Path
         double dist = iter.getDistance();
         distance += dist;
         time += calcMillis(dist, iter.getFlags(), false);
+        int wayType = (int) this.encoder.getDouble(iter.getFlags(), DynamicWeighting.WAY_TYPE_KEY);
+
+        System.out.println(wayType + ": dist: " + dist);
+
         addEdge(edgeId);
     }
 

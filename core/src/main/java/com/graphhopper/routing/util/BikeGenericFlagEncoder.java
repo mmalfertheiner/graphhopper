@@ -150,7 +150,7 @@ public class BikeGenericFlagEncoder extends AbstractFlagEncoder
         unpavedSurfaceTags.add("salt");
         unpavedSurfaceTags.add("sand");
 
-        maxPossibleSpeed = 30;
+        maxPossibleSpeed = 34;
 
         setSurfaceSpeedFactor("concrete:lanes", 0.9f);
         setSurfaceSpeedFactor("concrete:plates", 0.9f);
