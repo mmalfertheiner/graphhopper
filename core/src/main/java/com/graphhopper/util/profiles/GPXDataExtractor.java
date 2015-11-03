@@ -67,7 +67,7 @@ public class GPXDataExtractor {
         // create MapMatching object, can and should be shared accross threads
         GraphHopperStorage graph = hopper.getGraphHopperStorage();
         LocationIndexMatch locationIndex = new LocationIndexMatch(graph, (LocationIndexTree) hopper.getLocationIndex());
-        encoder = (BikeGenericFlagEncoder) hopper.getEncodingManager().getEncoder("generic_bike");
+        encoder = (BikeGenericFlagEncoder) hopper.getEncodingManager().getEncoder("genbike");
 
         mapMatching = new MapMatching(graph, locationIndex, encoder);
         mapMatching.setForceRepair(true);

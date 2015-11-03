@@ -174,7 +174,7 @@ public class BikeGenericFlagEncoder extends AbstractFlagEncoder
         setWayTypeSpeed(WayType.SMALL_WAY_PAVED.getValue(), 16);
         setWayTypeSpeed(WayType.SMALL_WAY_UNPAVED.getValue(), 10);
         setWayTypeSpeed(WayType.TRACK_EASY.getValue(), 14);
-        setWayTypeSpeed(WayType.TRACK_MIDDLE.getValue(), 12);
+        setWayTypeSpeed(WayType.TRACK_MIDDLE.getValue(), 10);
         setWayTypeSpeed(WayType.TRACK_HARD.getValue(), 8);
         setWayTypeSpeed(WayType.PATH_EASY.getValue(), 8);
         setWayTypeSpeed(WayType.PATH_MIDDLE.getValue(), 6);
