@@ -37,21 +37,16 @@ public class BikeGenericFlagEncoder extends AbstractFlagEncoder
 {
 
     private final DistanceCalc distCalc = Helper.DIST_EARTH;
-    /**
-     * Reports wether this edge is unpaved.
-     */
     public static final int PUSHING_SECTION_SPEED = 4;
+
     // Pushing section highways are parts where you need to get off your bike and push it (German: Schiebestrecke)
     protected final HashSet<String> pushingSections = new HashSet<String>();
     protected final HashSet<String> oppositeLanes = new HashSet<String>();
     protected final Set<String> acceptedHighwayTags = new HashSet<String>();
-    protected final Set<String> preferHighwayTags = new HashSet<String>();
-    protected final Set<String> avoidHighwayTags = new HashSet<String>();
 
     protected final Set<String> pavedSurfaceTags = new HashSet<String>();
     protected final Set<String> unpavedSurfaceTags = new HashSet<String>();
 
-    //private final Map<String, Integer> trackTypeSpeeds = new HashMap<String, Integer>();
     private final Map<String, Float> surfaceSpeedFactors = new HashMap<String, Float>();
     private final Map<Integer, Integer> wayTypeSpeeds = new HashMap<Integer, Integer>();
     // convert network tag of bicycle routes into a way route code
@@ -217,15 +212,6 @@ public class BikeGenericFlagEncoder extends AbstractFlagEncoder
         addPushingSection("pedestrian");
         addPushingSection("steps");
 
-
-        /*setCyclingNetworkPreference("icn", 1);
-        setCyclingNetworkPreference("ncn", 2);
-        setCyclingNetworkPreference("rcn", 3);
-        setCyclingNetworkPreference("lcn", 4);
-        setCyclingNetworkPreference("mtb", PriorityCode.UNCHANGED.getValue());
-
-        setCyclingNetworkPreference("deprecated", PriorityCode.AVOID_AT_ALL_COSTS.getValue());*/
-
         setAvoidSpeedLimit(81);
     }
 
@@ -247,10 +233,6 @@ public class BikeGenericFlagEncoder extends AbstractFlagEncoder
         // 4 bits to store street classification
         wayTypeEncoder = new EncodedValue("WayType", shift, 4, 1, 0, 15, true);
         shift += wayTypeEncoder.getBits();
-
-        // 3 bits to store preference on specific ways
-        //priorityWayEncoder = new EncodedValue("PreferWay", shift, 3, 1, 0, 7);
-        //shift += priorityWayEncoder.getBits();
 
         // 6 bits to store incline
         inclineSlopeEncoder = new EncodedDoubleValue("InclineSlope", shift, 6, 1, 0, 40, true);
@@ -494,117 +476,6 @@ public class BikeGenericFlagEncoder extends AbstractFlagEncoder
         return wayTypeName;
     }
 
-    /**
-     * In this method we prefer cycleways or roads with designated bike access and avoid big roads
-     * or roads with trams or pedestrian.
-     * <p>
-     * @return new priority based on priorityFromRelation and on the tags in OSMWay.
-     */
-    protected int handlePriority( OSMWay way, int priorityFromRelation )
-    {
-        TreeMap<Double, Integer> weightToPrioMap = new TreeMap<Double, Integer>();
-        if (priorityFromRelation == 0)
-            weightToPrioMap.put(0d, UNCHANGED.getValue());
-        else
-            weightToPrioMap.put(110d, priorityFromRelation);
-
-        collect(way, weightToPrioMap);
-
-        // pick priority with biggest order value
-        return weightToPrioMap.lastEntry().getValue();
-    }
-
-    // Conversion of class value to priority. See http://wiki.openstreetmap.org/wiki/Class:bicycle
-    private PriorityCode convertCallValueToPriority( String tagvalue )
-    {
-        int classvalue;
-        try
-        {
-            classvalue = Integer.parseInt(tagvalue);
-        } catch (NumberFormatException e)
-        {
-            return PriorityCode.UNCHANGED;
-        }
-
-        switch (classvalue)
-        {
-            case 3:
-                return PriorityCode.BEST;
-            case 2:
-                return PriorityCode.VERY_NICE;
-            case 1:
-                return PriorityCode.PREFER;
-            case 0:
-                return PriorityCode.UNCHANGED;
-            case -1:
-                return PriorityCode.AVOID_IF_POSSIBLE;
-            case -2:
-                return PriorityCode.REACH_DEST;
-            case -3:
-                return PriorityCode.AVOID_AT_ALL_COSTS;
-            default:
-                return PriorityCode.UNCHANGED;
-        }
-    }
-
-    /**
-     * @param weightToPrioMap associate a weight with every priority. This sorted map allows
-     * subclasses to 'insert' more important priorities as well as overwrite determined priorities.
-     */
-    void collect( OSMWay way, TreeMap<Double, Integer> weightToPrioMap )
-    {
-        String service = way.getTag("service");
-        String highway = way.getTag("highway");
-        if (way.hasTag("bicycle", "designated"))
-            weightToPrioMap.put(100d, PREFER.getValue());
-        if ("cycleway".equals(highway))
-            weightToPrioMap.put(100d, VERY_NICE.getValue());
-
-        double maxSpeed = getMaxSpeed(way);
-        if (preferHighwayTags.contains(highway) || maxSpeed > 0 && maxSpeed <= 30)
-        {
-            if (maxSpeed < avoidSpeedLimit)
-            {
-                weightToPrioMap.put(40d, PREFER.getValue());
-                if (way.hasTag("tunnel", intendedValues))
-                    weightToPrioMap.put(40d, UNCHANGED.getValue());
-            }
-        } else
-        {
-            if (avoidHighwayTags.contains(highway)
-                    || maxSpeed >= avoidSpeedLimit && !"track".equals(highway))
-            {
-                weightToPrioMap.put(50d, REACH_DEST.getValue());
-                if (way.hasTag("tunnel", intendedValues))
-                    weightToPrioMap.put(50d, AVOID_AT_ALL_COSTS.getValue());
-            }
-        }
-
-        if (pushingSections.contains(highway)
-                || way.hasTag("bicycle", "use_sidepath")
-                || "parking_aisle".equals(service))
-        {
-            if (way.hasTag("bicycle", "yes"))
-                weightToPrioMap.put(100d, UNCHANGED.getValue());
-            else
-                weightToPrioMap.put(50d, AVOID_IF_POSSIBLE.getValue());
-        }
-
-        if (way.hasTag("railway", "tram"))
-            weightToPrioMap.put(50d, AVOID_AT_ALL_COSTS.getValue());
-
-        String classBicycleSpecific = way.getTag(specificBicycleClass);
-        if (classBicycleSpecific != null)
-        {
-            // We assume that humans are better in classifying preferences compared to our algorithm above -> weight = 100
-            weightToPrioMap.put(100d, convertCallValueToPriority(classBicycleSpecific).getValue());
-        } else
-        {
-            String classBicycle = way.getTag("class:bicycle");
-            if (classBicycle != null)
-                weightToPrioMap.put(100d, convertCallValueToPriority(classBicycle).getValue());
-        }
-    }
 
     /**
      * Handle surface and wayType encoding

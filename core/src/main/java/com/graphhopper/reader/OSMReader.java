@@ -401,13 +401,13 @@ public class OSMReader implements DataReader
                 if(smoothingFilter.equalsIgnoreCase("mean"))
                     filter = new MeanFilter(tmpDistances, 100);
                 else
-                    filter = new SimpleKalmanFilter(SimpleKalmanFilter.COMBINED, 6, tmpDistances, 40);
+                    filter = new SimpleKalmanFilter(SimpleKalmanFilter.COMBINED, 6, tmpDistances, 60);
 
                 double[] estimatedElevations = filter.smooth(tmpElevations);
 
                 for (int i = 0; i < estimatedElevations.length; i++) {
                     osmNodeId = getNodeMap().get(osmNodeIds.get(i));
-                    updateTmpElevation(osmNodeId, estimatedElevations[i]);
+                    updateTmpElevation(osmNodeId, estimatedElevations[i], (i == 0 || i == estimatedElevations.length - 1));
                 }
             }
         }
@@ -620,11 +620,13 @@ public class OSMReader implements DataReader
 
     //TODO update elevation
 
-    boolean updateTmpElevation( int id, double ele ){
+    boolean updateTmpElevation( int id, double ele, boolean average ){
         if (id == EMPTY)
             return false;
         if(id < TOWER_NODE){
-            ele = (getTmpElevation(id) + ele) / 2;
+            if(average)
+                ele = (getTmpElevation(id) + ele) / 2;
+
             id = -id -3;
             nodeAccess.setElevation(id, ele);
             return true;
