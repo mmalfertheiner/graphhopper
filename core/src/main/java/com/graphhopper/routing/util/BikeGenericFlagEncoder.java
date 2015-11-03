@@ -502,14 +502,14 @@ public class BikeGenericFlagEncoder extends AbstractFlagEncoder
         else if ("tertiary".equals(highway) || "tertiary_link".equals(highway))
             wayType = WayType.TERTIARY_ROAD;
         else if ("unclassified".equals(highway)) {
-            if (!pavedSurfaceTags.contains(surfaceTag))
+            if (unpavedSurfaceTags.contains(surfaceTag) || (trackType != null && !trackType.equals("grade1")))
                 wayType = WayType.UNCLASSIFIED_UNPAVED;
             else
                 wayType = WayType.UNCLASSIFIED_PAVED;
         }
         else if ("residential".equals(highway) || "living_street".equals(highway) || "service".equals(highway)){
 
-            if(unpavedSurfaceTags.contains(surfaceTag))
+            if(unpavedSurfaceTags.contains(surfaceTag) || (trackType != null && !trackType.equals("grade1")))
                 wayType = WayType.SMALL_WAY_UNPAVED;
             else
                 wayType = WayType.SMALL_WAY_PAVED;
@@ -682,8 +682,8 @@ public class BikeGenericFlagEncoder extends AbstractFlagEncoder
         ROAD(1),
         TERTIARY_ROAD(2),
         UNCLASSIFIED_PAVED(3),
-        UNCLASSIFIED_UNPAVED(4),
-        SMALL_WAY_PAVED(5),
+        SMALL_WAY_PAVED(4),
+        UNCLASSIFIED_UNPAVED(5),
         SMALL_WAY_UNPAVED(6),
         TRACK_EASY(7),
         TRACK_MIDDLE(8),

@@ -112,7 +112,7 @@ public class DynamicWeighting implements Weighting
         } else if (wayType == 11 || wayType == 12) {
             //Should be considered only for Downhill racers
             priority = PriorityCode.WORST.getValue();
-        } else if (wayType >= 2 && wayType <= 6){
+        } else if (wayType >= 2 && wayType <= 4){
             priority = PriorityCode.PREFER.getValue();
         } else if (wayType == 15){
             priority = PriorityCode.WORST.getValue();
