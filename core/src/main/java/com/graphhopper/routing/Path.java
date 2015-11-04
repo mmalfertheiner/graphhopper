@@ -23,14 +23,13 @@ import com.graphhopper.storage.Graph;
 import com.graphhopper.storage.NodeAccess;
 import com.graphhopper.util.*;
 import com.graphhopper.util.profiles.ProfileManager;
+import com.graphhopper.util.profiles.ProfileRepository;
 import com.graphhopper.util.profiles.RidersProfile;
 import gnu.trove.list.TIntList;
 import gnu.trove.list.array.TIntArrayList;
 
 import java.util.ArrayList;
 import java.util.List;
-
-import static com.graphhopper.util.Helper.keepIn;
 
 /**
  * Stores the nodes for the found path of an algorithm. It additionally needs the edgeIds to make
@@ -377,12 +376,12 @@ public class Path
 
         time = 0;
         String profileName = params.get("profile", "");
-        RidersProfile ridersProfile = null;
+        ProfileManager profileManager = new ProfileManager(new ProfileRepository());
 
         if(!profileName.equals(""))
-            ridersProfile = new ProfileManager().getProfile(profileName);
+            profileManager.init(profileName, encoder);
 
-        final SpeedProvider speedProvider = new ProfileSpeedProvider(encoder, ridersProfile);
+        final SpeedProvider speedProvider = new ProfileSpeedProvider(encoder, profileManager);
 
         forEveryEdge(new EdgeVisitor() {
 

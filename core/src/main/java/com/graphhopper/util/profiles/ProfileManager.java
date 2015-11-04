@@ -1,124 +1,122 @@
 package com.graphhopper.util.profiles;
 
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.lang.ClassNotFoundException;
-import java.lang.Object;
-import java.lang.String;
 
+import com.graphhopper.routing.util.BikeGenericFlagEncoder;
+import com.graphhopper.routing.util.FlagEncoder;
+import org.apache.commons.math3.fitting.WeightedObservedPoint;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 
 public class ProfileManager {
 
-
+    private ProfileRepository profileRepository;
     private RidersProfile ridersProfile;
-    private final String base = "profiles/";
 
-    public ProfileManager(){}
+    private double totalDistance;
+    private int bestFit = -1;
+    private short[] counts = new short[RidersProfile.WAY_TYPES];
+    private double[] distances = new double[RidersProfile.WAY_TYPES];
+    private Map<Integer, double[]> userSpeeds;
 
-    public void createProfile(String name) {
-        ridersProfile = new RidersProfile();
-
-        saveProfile(name);
+    public ProfileManager(ProfileRepository profileRepository){
+        this.profileRepository = profileRepository;
     }
 
-    public void readProfile(String name){
+    public ProfileManager init(String name, FlagEncoder flagEncoder){
+        this.ridersProfile = profileRepository.getProfile(name);
 
-        FileInputStream fileInputStream = null;
-        ObjectInputStream inputStream = null;
-        Object obj = null;
+        if(hasProfile()){
 
-        try {
+            this.userSpeeds = new HashMap<Integer, double[]>();
+            double availableData = 0;
 
-            fileInputStream = new FileInputStream(base + name);
-            inputStream = new ObjectInputStream (fileInputStream);
-            obj = inputStream.readObject();
+            for(int i = 0; i < RidersProfile.WAY_TYPES; i++){
 
+                RidersEntry[] tmpEntries = this.ridersProfile.getEntries(i);
 
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        } finally {
+                for (int j = 0; j < RidersProfile.SLOPES+1; j++) {
 
-            if(inputStream != null){
-                try {
-                    inputStream.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
+                    if(tmpEntries[j] != null) {
+                        counts[i]++;
+                        distances[i] += tmpEntries[j].getDistance();
+                        totalDistance += tmpEntries[j].getDistance();
+                    }
+
                 }
-            }
 
-            if(fileInputStream != null){
-                try {
-                    fileInputStream.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
+
+                if(hasSpeedProfile(i)) {
+
+                    if(counts[i] * distances[i] > availableData){
+                        bestFit = i;
+                        availableData = counts[i] * distances[i];
+                    }
+
+                    this.userSpeeds.put(i, filterSpeeds(tmpEntries, i, flagEncoder));
                 }
+
             }
 
         }
 
+        return this;
 
-        if (obj instanceof RidersProfile)
-        {
-            ridersProfile = (RidersProfile) obj;
-        }
     }
 
+    public boolean hasProfile(){
+        return this.ridersProfile != null;
+    }
 
-    public void saveProfile(String name){
-        if (ridersProfile == null)
-            return;
+    public boolean hasSpeedProfile(int wayType){
+        return distances[wayType] > 10000 && counts[wayType] > 5;
+    }
 
-        FileOutputStream fileOutputStream = null;
-        ObjectOutputStream outputStream = null;
+    public boolean hasFilteredSpeeds(){
+        return bestFit > 0;
+    }
 
-        try {
-            fileOutputStream = new FileOutputStream(base + name);
-            outputStream = new ObjectOutputStream(fileOutputStream);
-            outputStream.writeObject(ridersProfile);
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        } finally {
-            if(outputStream != null) {
-                try {
-                    outputStream.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
+    public double getSpeedPerSlope(int wayType, int slopeIndex, BikeGenericFlagEncoder flagEncoder) {
+
+        if(!hasProfile())
+            return Double.NaN;
+
+        if(hasSpeedProfile(wayType))
+            return userSpeeds.get(wayType)[slopeIndex];
+
+        if(bestFit > 0)
+            return userSpeeds.get(bestFit)[slopeIndex] * (flagEncoder.getWayTypeSpeed(wayType) / flagEncoder.getWayTypeSpeed(bestFit));
+
+        return Double.NaN;
+
+    }
+
+    private double[] filterSpeeds(RidersEntry[] ridersEntries, int wayType, FlagEncoder flagEncoder) {
+
+        ArrayList<WeightedObservedPoint> points = new ArrayList<WeightedObservedPoint>();
+
+        double maxSpeed = ridersProfile.maxSpeed(wayType, flagEncoder.getMaxSpeed());
+
+        for ( int i = 0; i < ridersEntries.length; i++){
+            if(ridersEntries[i] != null) {
+                points.add(new WeightedObservedPoint(ridersEntries[i].getDistance(), i - RidersProfile.SLOPES / 2, ridersEntries[i].getSpeed() / maxSpeed));
             }
-
-            if(fileOutputStream != null) {
-                try {
-                    fileOutputStream.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-        }
-    }
-
-
-    public RidersProfile getProfile(String name){
-
-        if(name == null || name.equals(""))
-            return null;
-
-        if (ridersProfile == null) {
-            readProfile(name);
         }
 
-        return ridersProfile;
-    }
+        final double[] coef = new SigmoidalFitter(new double[]{1, 0.5, -1}).fit(points);
+        SigmoidFunction sigF = new SigmoidFunction();
 
+        double[] result = new double[RidersProfile.SLOPES + 1];
+
+        int offset = RidersProfile.SLOPES / 2;
+
+        for( int i = - offset; i < offset + 1; i++){
+            result[i + offset] = sigF.value(i, coef) * maxSpeed;
+        }
+
+        return result;
+    }
 
 
 }

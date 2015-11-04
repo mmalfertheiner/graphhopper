@@ -713,7 +713,7 @@ public class BikeGenericFlagEncoder extends AbstractFlagEncoder
         wayTypeSpeeds.put(wayType, speed);
     }
 
-    protected int getWayTypeSpeed( int wayType )
+    public int getWayTypeSpeed( int wayType )
     {
         return wayTypeSpeeds.get(wayType);
     }

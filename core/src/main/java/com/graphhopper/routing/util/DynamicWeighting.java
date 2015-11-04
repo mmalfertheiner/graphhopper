@@ -19,14 +19,10 @@
 package com.graphhopper.routing.util;
 
 import com.graphhopper.util.EdgeIteratorState;
-import com.graphhopper.util.Helper;
 import com.graphhopper.util.PMap;
 import com.graphhopper.util.profiles.ProfileManager;
+import com.graphhopper.util.profiles.ProfileRepository;
 import com.graphhopper.util.profiles.RidersProfile;
-
-import java.util.Map;
-
-import static com.graphhopper.util.Helper.keepIn;
 
 /**
  * Special weighting for (motor)bike
@@ -40,7 +36,7 @@ public class DynamicWeighting implements Weighting
     final static double DEFAULT_HEADING_PENALTY = 300; //[s]
     private final double heading_penalty;
     protected final FlagEncoder flagEncoder;
-    protected RidersProfile profile;
+    protected ProfileManager profileManager;
 
     /**
      * For now used only in BikeGenericFlagEncoder
@@ -59,7 +55,7 @@ public class DynamicWeighting implements Weighting
         this.flagEncoder = encoder;
         heading_penalty = pMap.getDouble("heading_penalty", DEFAULT_HEADING_PENALTY);
         String user = pMap.get("profile", "");
-        profile = new ProfileManager().getProfile(user);
+        profileManager = new ProfileManager(new ProfileRepository()).init(user, flagEncoder);
 
     }
 
@@ -71,7 +67,7 @@ public class DynamicWeighting implements Weighting
     @Override
     public double calcWeight( EdgeIteratorState edgeState, boolean reverse, int prevOrNextEdgeId )
     {
-        SpeedProvider speedProvider = new ProfileSpeedProvider(flagEncoder, profile);
+        SpeedProvider speedProvider = new ProfileSpeedProvider(flagEncoder, profileManager);
 
         double speed = speedProvider.calcSpeed(edgeState, reverse);
 

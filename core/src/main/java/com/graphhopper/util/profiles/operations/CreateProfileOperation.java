@@ -1,6 +1,6 @@
 package com.graphhopper.util.profiles.operations;
 
-import com.graphhopper.util.profiles.ProfileManager;
+import com.graphhopper.util.profiles.ProfileRepository;
 
 public class CreateProfileOperation implements Operation {
 
@@ -12,7 +12,7 @@ public class CreateProfileOperation implements Operation {
 
     @Override
     public void run() {
-        ProfileManager aProfileManager = new ProfileManager();
-        aProfileManager.createProfile(name);
+        ProfileRepository profileRepository = new ProfileRepository();
+        profileRepository.createProfile(name);
     }
 }
