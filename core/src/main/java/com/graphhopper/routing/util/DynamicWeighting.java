@@ -55,7 +55,7 @@ public class DynamicWeighting implements Weighting
         this.flagEncoder = encoder;
         heading_penalty = pMap.getDouble("heading_penalty", DEFAULT_HEADING_PENALTY);
         String user = pMap.get("profile", "");
-        profileManager = new ProfileManager(new ProfileRepository()).init(user, flagEncoder);
+        profileManager = new ProfileManager(new ProfileRepository()).init(user, (BikeGenericFlagEncoder)flagEncoder);
 
     }
 
@@ -97,7 +97,16 @@ public class DynamicWeighting implements Weighting
             priority = PriorityCode.AVOID_AT_ALL_COSTS.getValue();
         else if(wayType == 13 || wayType == 14)
             priority = PriorityCode.BEST.getValue();
-        else if(wayType == 10) {
+        else if(wayType == 7 && wayType == 8){
+
+            priority = PriorityCode.AVOID_IF_POSSIBLE.getValue();
+
+            if(incDist2DSum > 10 && incElevation > 0.02) {
+                priority = PriorityCode.AVOID_AT_ALL_COSTS.getValue();
+            }
+
+        }
+        else if(wayType == 9 && wayType == 10) {
 
             priority = PriorityCode.REACH_DEST.getValue();
 
@@ -113,6 +122,10 @@ public class DynamicWeighting implements Weighting
         } else if (wayType == 15){
             priority = PriorityCode.WORST.getValue();
         }
+
+        //If it is very steep don't use it
+        if(incDist2DSum > 10 && incElevation > 0.2)
+            priority = PriorityCode.WORST.getValue();
 
         return (double) priority / PriorityCode.BEST.getValue();
 

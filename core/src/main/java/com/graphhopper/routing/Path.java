@@ -379,7 +379,7 @@ public class Path
         ProfileManager profileManager = new ProfileManager(new ProfileRepository());
 
         if(!profileName.equals(""))
-            profileManager.init(profileName, encoder);
+            profileManager.init(profileName, (BikeGenericFlagEncoder) encoder);
 
         final SpeedProvider speedProvider = new ProfileSpeedProvider(encoder, profileManager);
 

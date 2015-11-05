@@ -40,6 +40,8 @@ public class ProfileSpeedProvider implements SpeedProvider {
             double incSpeed = profileManager.getSpeedPerSlope(wayType, incIndex, (BikeGenericFlagEncoder) encoder);
             double decSpeed = profileManager.getSpeedPerSlope(wayType, decIndex, (BikeGenericFlagEncoder) encoder);
 
+            System.out.println("INC INDEX: " + incIndex + ", SPEED: " + incSpeed + ", WAY: " + wayType);
+
             double incDist2DSum = edgeState.getDistance() * incDistPercentage;
             double decDist2DSum = edgeState.getDistance() - incDist2DSum;
 
@@ -79,13 +81,13 @@ public class ProfileSpeedProvider implements SpeedProvider {
         if (!reverse)
         {
             // use weighted mean so that longer incline infuences speed more than shorter
-            double fwdFaster = 1 + 30 * keepIn(decElevation, 0, 0.1);
+            double fwdFaster = 1 + 30 * keepIn(decElevation, 0, 0.2);
             fwdFaster = Math.sqrt(fwdFaster);
             double fwdSlower = 1 - 5 * keepIn(incElevation, 0, 0.2);
             fwdSlower = fwdSlower * fwdSlower;
             adjustedSpeed = keepIn(speed * (fwdSlower * incDist2DSum + fwdFaster * decDist2DSum) / edgeState.getDistance(), BikeGenericFlagEncoder.PUSHING_SECTION_SPEED / 2, 50);
         } else {
-            double fwdFaster = 1 + 30 * keepIn(incElevation, 0, 0.1);
+            double fwdFaster = 1 + 30 * keepIn(incElevation, 0, 0.2);
             fwdFaster = Math.sqrt(fwdFaster);
             double fwdSlower = 1 - 5 * keepIn(decElevation, 0, 0.2);
             fwdSlower = fwdSlower * fwdSlower;
