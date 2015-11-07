@@ -20,6 +20,7 @@ package com.graphhopper.routing.util;
 
 import com.graphhopper.util.EdgeIteratorState;
 import com.graphhopper.util.PMap;
+import com.graphhopper.util.profiles.ProfileManager;
 
 /**
  * Special weighting for (motor)bike
@@ -34,6 +35,7 @@ public class DynamicWeighting implements Weighting
     private final double heading_penalty;
     protected final FlagEncoder flagEncoder;
     protected SpeedProvider speedProvider;
+    protected ProfileManager profileManager;
 
     /**
      * For now used only in BikeGenericFlagEncoder
@@ -44,7 +46,7 @@ public class DynamicWeighting implements Weighting
     public static final int WAY_TYPE_KEY = 105;
 
 
-    public DynamicWeighting(FlagEncoder encoder, PMap pMap, SpeedProvider speedProvider)
+    public DynamicWeighting(FlagEncoder encoder, PMap pMap, ProfileManager profileManager)
     {
         if (!encoder.isRegistered())
             throw new IllegalStateException("Make sure you add the FlagEncoder " + encoder + " to an EncodingManager before using it elsewhere");
@@ -52,15 +54,17 @@ public class DynamicWeighting implements Weighting
         this.flagEncoder = encoder;
         heading_penalty = pMap.getDouble("heading_penalty", DEFAULT_HEADING_PENALTY);
 
-        if(speedProvider == null)
-            this.speedProvider = new EncoderSpeedProvider(encoder);
+        this.profileManager = profileManager;
 
-        this.speedProvider = speedProvider;
+        if(profileManager == null)
+            this.speedProvider = new EncoderSpeedProvider(encoder);
+        else
+            this.speedProvider = new ProfileSpeedProvider(encoder, profileManager);
     }
 
     public DynamicWeighting(FlagEncoder encoder)
     {
-        this(encoder, new PMap(0), new EncoderSpeedProvider(encoder));
+        this(encoder, new PMap(0), null);
     }
 
     @Override

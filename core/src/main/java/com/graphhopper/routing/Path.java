@@ -176,8 +176,11 @@ public class Path
         return this;
     }
 
-    public Path setSpeedProvider( SpeedProvider speedProvider){
-        this.speedProvider = speedProvider;
+    public Path initSpeedProvider( final ProfileManager profileManager){
+        if(profileManager == null)
+            return this;
+
+        this.speedProvider = new ProfileSpeedProvider(encoder, profileManager);
         return this;
     }
 

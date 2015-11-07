@@ -78,6 +78,10 @@ public class ProfileManager {
         return bestFit > 0;
     }
 
+    public double getWayTypePreference(int wayType){
+        return distances[wayType] / totalDistance;
+    }
+
     public double getSpeedPerSlope(int wayType, int slopeIndex, BikeGenericFlagEncoder flagEncoder) {
 
         if(!hasProfile())

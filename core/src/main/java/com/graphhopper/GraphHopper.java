@@ -937,7 +937,7 @@ public class GraphHopper implements GraphHopperAPI
         return createWeighting(weightingMap, encoder, null);
     }
 
-    public Weighting createWeighting( WeightingMap weightingMap, FlagEncoder encoder, SpeedProvider speedProvider )
+    public Weighting createWeighting( WeightingMap weightingMap, FlagEncoder encoder, ProfileManager profileManager )
     {
         String weighting = weightingMap.getWeighting().toLowerCase();
 
@@ -952,9 +952,7 @@ public class GraphHopper implements GraphHopperAPI
                 return new FastestWeighting(encoder, weightingMap);
         } else if ("dynamic".equalsIgnoreCase(weighting))
         {
-            if(speedProvider == null)
-                speedProvider = new EncoderSpeedProvider(encoder);
-            return new DynamicWeighting(encoder, weightingMap, speedProvider);
+            return new DynamicWeighting(encoder, weightingMap, profileManager);
         }
 
         throw new UnsupportedOperationException("weighting " + weighting + " not supported");
@@ -989,12 +987,15 @@ public class GraphHopper implements GraphHopperAPI
     public GHResponse route( GHRequest request )
     {
         GHResponse response = new GHResponse();
+        ProfileManager profileManager = null;
         SpeedProvider speedProvider = null;
 
-        if(request.getVehicle().equals("genbike"))
-            speedProvider = initSpeedProvider(request.getHints().get("profile", ""), encodingManager.getEncoder(request.getVehicle()));
+        if(request.getVehicle().equals("genbike")) {
+            profileManager = initProfile(request.getHints().get("profile", ""), encodingManager.getEncoder(request.getVehicle()));
+            speedProvider = new ProfileSpeedProvider(encodingManager.getEncoder(request.getVehicle()), profileManager);
+        }
 
-        List<Path> paths = getPaths(request, response, speedProvider);
+        List<Path> paths = getPaths(request, response, profileManager);
         if (response.hasErrors())
             return response;
 
@@ -1017,7 +1018,7 @@ public class GraphHopper implements GraphHopperAPI
         return getPaths(request, rsp, null);
     }
 
-    protected List<Path> getPaths( GHRequest request, GHResponse rsp, SpeedProvider speedProvider )
+    protected List<Path> getPaths( GHRequest request, GHResponse rsp, ProfileManager profileManager)
     {
         if (ghStorage == null || !fullyLoaded)
             throw new IllegalStateException("Call load or importOrLoad before routing");
@@ -1086,7 +1087,7 @@ public class GraphHopper implements GraphHopperAPI
             weighting = getWeightingForCH(request.getHints(), encoder);
             routingGraph = ghStorage.getGraph(CHGraph.class, weighting);
         } else
-            weighting = createWeighting(request.getHints(), encoder, speedProvider);
+            weighting = createWeighting(request.getHints(), encoder, profileManager);
 
         RoutingAlgorithmFactory tmpAlgoFactory = getAlgorithmFactory(weighting);
         QueryGraph queryGraph = new QueryGraph(routingGraph);
@@ -1129,7 +1130,7 @@ public class GraphHopper implements GraphHopperAPI
 
             sw = new StopWatch().start();
             Path path = algo.calcPath(fromQResult.getClosestNode(), toQResult.getClosestNode());
-            path.setSpeedProvider(speedProvider);
+            path.initSpeedProvider(profileManager);
             path.updateTime();
 
             if (path.getTime() < 0)
@@ -1304,7 +1305,7 @@ public class GraphHopper implements GraphHopperAPI
         return new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ").format(date);
     }
 
-    private SpeedProvider initSpeedProvider(String profile, FlagEncoder encoder) {
+    private ProfileManager initProfile(String profile, FlagEncoder encoder) {
 
         ProfileManager profileManager = new ProfileManager(new ProfileRepository());
 
@@ -1312,7 +1313,7 @@ public class GraphHopper implements GraphHopperAPI
             profileManager.init(profile, (BikeGenericFlagEncoder) encoder);
         }
 
-        return new ProfileSpeedProvider(encoder, profileManager);
+        return profileManager;
     }
 
     protected void ensureNotLoaded()
