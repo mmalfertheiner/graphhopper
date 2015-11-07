@@ -58,6 +58,7 @@ public class Path
     private double weight;
     private NodeAccess nodeAccess;
     private String profile;
+    private SpeedProvider speedProvider;
 
     public Path( Graph graph, FlagEncoder encoder )
     {
@@ -175,8 +176,8 @@ public class Path
         return this;
     }
 
-    public Path setProfile( String profile){
-        this.profile = profile;
+    public Path setSpeedProvider( SpeedProvider speedProvider){
+        this.speedProvider = speedProvider;
         return this;
     }
 
@@ -259,7 +260,7 @@ public class Path
         return (long) (distance * 3600 / speed);
     }
 
-    protected long calcMillis( EdgeIteratorState edge, boolean revert, SpeedProvider speedProvider) {
+    protected long calcMillis( EdgeIteratorState edge, boolean revert) {
 
         if (revert && !encoder.isBackward(edge.getFlags())
                 || !revert && !encoder.isForward(edge.getFlags()))
@@ -392,32 +393,18 @@ public class Path
         return points;
     }
 
-    private SpeedProvider initSpeedProvider() {
+    public void updateTime(){
 
-        ProfileManager profileManager = new ProfileManager(new ProfileRepository());
-
-        if(!profile.equals("")) {
-            profileManager.init(profile, (BikeGenericFlagEncoder) encoder);
-        }
-
-        return new ProfileSpeedProvider(encoder, profileManager);
-
-    }
-
-    public void updateTime(PMap params){
-
+        if(speedProvider == null)
+            return;
         time = 0;
-        String profileName = params.get("profile", "");
-        setProfile(profileName);
-
-        final SpeedProvider speedProvider = initSpeedProvider();
 
         forEveryEdge(new EdgeVisitor() {
 
             @Override
             public void next(EdgeIteratorState edgeBase, int index) {
 
-                time += calcMillis(edgeBase, false, speedProvider);
+                time += calcMillis(edgeBase, false);
 
             }
         });
@@ -679,10 +666,9 @@ public class Path
                 }
                 double newDist = edge.getDistance();
                 prevInstruction.setDistance(newDist + prevInstruction.getDistance());
-                final SpeedProvider speedProvider = initSpeedProvider();
-                if(speedProvider != null)
-                    prevInstruction.setTime(calcMillis(edge, false, speedProvider) + prevInstruction.getTime());
-                else {
+                if(speedProvider != null) {
+                    prevInstruction.setTime(calcMillis(edge, false) + prevInstruction.getTime());
+                } else {
                     long flags = edge.getFlags();
                     prevInstruction.setTime(calcMillis(newDist, flags, false) + prevInstruction.getTime());
                 }

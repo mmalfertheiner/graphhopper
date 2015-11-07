@@ -51,11 +51,65 @@ public class SigmoidalFitter extends AbstractCurveFitter{
                 build();
     }
 
+
+    private static double setupTestSet(ArrayList<WeightedObservedPoint> points, String name, int wayType){
+        ProfileRepository profileRepository = new ProfileRepository();
+        RidersProfile ridersProfile = profileRepository.getProfile(name);
+
+        RidersEntry[] entries = ridersProfile.getEntries(wayType);
+
+        double maxSpeed = 0;
+
+        for(RidersEntry entry : entries){
+            if (entry != null && maxSpeed < entry.getSpeed())
+                maxSpeed = entry.getSpeed();
+        }
+
+        for(int i = 0; i < entries.length; i++) {
+            if (entries[i] != null) {
+                double weight = entries[i].getDistance();
+                int slope = i - (RidersProfile.SLOPES / 2);
+                double speed = entries[i].getSpeed() / maxSpeed;
+                points.add(new WeightedObservedPoint(weight, slope, speed));
+            }
+        }
+
+        addData(points, maxSpeed, 40);
+        return maxSpeed;
+    }
+
+    private static void addData(ArrayList<WeightedObservedPoint> points, double maxSpeed, double weight) {
+        points.add(new WeightedObservedPoint(weight, 0, 18 / maxSpeed));
+        points.add(new WeightedObservedPoint(weight, 1, 16.245 / maxSpeed));
+        points.add(new WeightedObservedPoint(weight, 2, 14.58 / maxSpeed));
+        points.add(new WeightedObservedPoint(weight, 3, 13.005 / maxSpeed));
+        points.add(new WeightedObservedPoint(weight, 4, 11.52 / maxSpeed));
+        points.add(new WeightedObservedPoint(weight, 5, 10.125 / maxSpeed));
+        points.add(new WeightedObservedPoint(weight, 6, 8.82 / maxSpeed));
+        points.add(new WeightedObservedPoint(weight, 7, 7.605 / maxSpeed));
+        points.add(new WeightedObservedPoint(weight, 8, 6.48 / maxSpeed));
+        points.add(new WeightedObservedPoint(weight, 9, 5.445 / maxSpeed));
+        points.add(new WeightedObservedPoint(weight, 10, 4.5 / maxSpeed));
+        points.add(new WeightedObservedPoint(weight, 11, 3.645 / maxSpeed));
+        points.add(new WeightedObservedPoint(weight, 12, 2.88 / maxSpeed));
+        points.add(new WeightedObservedPoint(weight, -1, 20.1364009575 / maxSpeed));
+        points.add(new WeightedObservedPoint(weight, -2, 21.8959271841 / maxSpeed));
+        points.add(new WeightedObservedPoint(weight, -3, 23.4106460433 / maxSpeed));
+        points.add(new WeightedObservedPoint(weight, -4, 24.7512396073 / maxSpeed));
+        points.add(new WeightedObservedPoint(weight, -5, 25.9604922655 / maxSpeed));
+        points.add(new WeightedObservedPoint(weight, -6, 27.0665027317 / maxSpeed));
+        points.add(new WeightedObservedPoint(weight, -7, 28.0888335127 / maxSpeed));
+        points.add(new WeightedObservedPoint(weight, -8, 29.0417156284 / maxSpeed));
+        points.add(new WeightedObservedPoint(weight, -9, 29.9358629791 / maxSpeed));
+        points.add(new WeightedObservedPoint(weight, -10, 30.7795670402 / maxSpeed));
+        points.add(new WeightedObservedPoint(weight, -11, 31.5793915727 / maxSpeed));
+    }
+
     public static void main(String[] args) {
         SigmoidalFitter fitter = new SigmoidalFitter(new double[] {1, 0.5, -1});
         ArrayList<WeightedObservedPoint> points = new ArrayList<WeightedObservedPoint>();
 
-        double maxSpeed = 37.36653;
+        /*double maxSpeed = 37.36653;
         double weight = 10;
 
         points.add(new WeightedObservedPoint(weight, 0, 18 / maxSpeed));
@@ -95,7 +149,7 @@ public class SigmoidalFitter extends AbstractCurveFitter{
         WeightedObservedPoint point8 = new WeightedObservedPoint(171.65067, -4, 30.89712 / maxSpeed);
         WeightedObservedPoint point9 = new WeightedObservedPoint(389.28305, -3, 24.898178 / maxSpeed);
         WeightedObservedPoint point10 = new WeightedObservedPoint(204.34619, -2, 13.880118 / maxSpeed);
-        WeightedObservedPoint point11 = new WeightedObservedPoint(209.81961, -1, 11.989692 / maxSpeed);*/
+        WeightedObservedPoint point11 = new WeightedObservedPoint(209.81961, -1, 11.989692 / maxSpeed);
         WeightedObservedPoint point12 = new WeightedObservedPoint(203.6042, 0, 15.595216 / 37.36653);
         WeightedObservedPoint point13 = new WeightedObservedPoint(619.88995, 1, 14.0128 / 37.36653);
         WeightedObservedPoint point14 = new WeightedObservedPoint(455.45798, 2, 10.182568 / 37.36653);
@@ -122,7 +176,7 @@ public class SigmoidalFitter extends AbstractCurveFitter{
         points.add(point8);
         points.add(point9);
         points.add(point10);
-        points.add(point11);*/
+        points.add(point11);
         points.add(point12);
         points.add(point13);
         points.add(point14);
@@ -137,7 +191,9 @@ public class SigmoidalFitter extends AbstractCurveFitter{
         points.add(point23);
         points.add(point24);
         points.add(point25);
-        points.add(point26);
+        points.add(point26);*/
+
+        double maxSpeed = setupTestSet(points, "sellaronda", 1);
 
         final double coeffs[] = fitter.fit(points);
         System.out.println(Arrays.toString(coeffs));

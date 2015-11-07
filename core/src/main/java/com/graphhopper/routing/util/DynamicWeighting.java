@@ -20,9 +20,6 @@ package com.graphhopper.routing.util;
 
 import com.graphhopper.util.EdgeIteratorState;
 import com.graphhopper.util.PMap;
-import com.graphhopper.util.profiles.ProfileManager;
-import com.graphhopper.util.profiles.ProfileRepository;
-import com.graphhopper.util.profiles.RidersProfile;
 
 /**
  * Special weighting for (motor)bike
@@ -36,7 +33,7 @@ public class DynamicWeighting implements Weighting
     final static double DEFAULT_HEADING_PENALTY = 300; //[s]
     private final double heading_penalty;
     protected final FlagEncoder flagEncoder;
-    protected ProfileManager profileManager;
+    protected SpeedProvider speedProvider;
 
     /**
      * For now used only in BikeGenericFlagEncoder
@@ -47,28 +44,28 @@ public class DynamicWeighting implements Weighting
     public static final int WAY_TYPE_KEY = 105;
 
 
-    public DynamicWeighting(FlagEncoder encoder, PMap pMap)
+    public DynamicWeighting(FlagEncoder encoder, PMap pMap, SpeedProvider speedProvider)
     {
         if (!encoder.isRegistered())
             throw new IllegalStateException("Make sure you add the FlagEncoder " + encoder + " to an EncodingManager before using it elsewhere");
 
         this.flagEncoder = encoder;
         heading_penalty = pMap.getDouble("heading_penalty", DEFAULT_HEADING_PENALTY);
-        String user = pMap.get("profile", "");
-        profileManager = new ProfileManager(new ProfileRepository()).init(user, (BikeGenericFlagEncoder)flagEncoder);
 
+        if(speedProvider == null)
+            this.speedProvider = new EncoderSpeedProvider(encoder);
+
+        this.speedProvider = speedProvider;
     }
 
     public DynamicWeighting(FlagEncoder encoder)
     {
-        this(encoder, new PMap(0));
+        this(encoder, new PMap(0), new EncoderSpeedProvider(encoder));
     }
 
     @Override
     public double calcWeight( EdgeIteratorState edgeState, boolean reverse, int prevOrNextEdgeId )
     {
-        SpeedProvider speedProvider = new ProfileSpeedProvider(flagEncoder, profileManager);
-
         double speed = speedProvider.calcSpeed(edgeState, reverse);
 
         if (speed == 0)

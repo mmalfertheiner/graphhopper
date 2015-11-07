@@ -28,6 +28,8 @@ import com.graphhopper.storage.index.LocationIndex;
 import com.graphhopper.storage.index.LocationIndexTree;
 import com.graphhopper.storage.index.QueryResult;
 import com.graphhopper.util.*;
+import com.graphhopper.util.profiles.ProfileManager;
+import com.graphhopper.util.profiles.ProfileRepository;
 import com.graphhopper.util.shapes.GHPoint;
 
 import org.slf4j.Logger;
@@ -932,6 +934,11 @@ public class GraphHopper implements GraphHopperAPI
      */
     public Weighting createWeighting( WeightingMap weightingMap, FlagEncoder encoder )
     {
+        return createWeighting(weightingMap, encoder, null);
+    }
+
+    public Weighting createWeighting( WeightingMap weightingMap, FlagEncoder encoder, SpeedProvider speedProvider )
+    {
         String weighting = weightingMap.getWeighting().toLowerCase();
 
         if ("shortest".equalsIgnoreCase(weighting))
@@ -945,7 +952,9 @@ public class GraphHopper implements GraphHopperAPI
                 return new FastestWeighting(encoder, weightingMap);
         } else if ("dynamic".equalsIgnoreCase(weighting))
         {
-            return new DynamicWeighting(encoder, weightingMap);
+            if(speedProvider == null)
+                speedProvider = new EncoderSpeedProvider(encoder);
+            return new DynamicWeighting(encoder, weightingMap, speedProvider);
         }
 
         throw new UnsupportedOperationException("weighting " + weighting + " not supported");
@@ -980,7 +989,12 @@ public class GraphHopper implements GraphHopperAPI
     public GHResponse route( GHRequest request )
     {
         GHResponse response = new GHResponse();
-        List<Path> paths = getPaths(request, response);
+        SpeedProvider speedProvider = null;
+
+        if(request.getVehicle().equals("genbike"))
+            speedProvider = initSpeedProvider(request.getHints().get("profile", ""), encodingManager.getEncoder(request.getVehicle()));
+
+        List<Path> paths = getPaths(request, response, speedProvider);
         if (response.hasErrors())
             return response;
 
@@ -999,7 +1013,11 @@ public class GraphHopper implements GraphHopperAPI
         return response;
     }
 
-    protected List<Path> getPaths( GHRequest request, GHResponse rsp )
+    protected List<Path> getPaths( GHRequest request, GHResponse rsp) {
+        return getPaths(request, rsp, null);
+    }
+
+    protected List<Path> getPaths( GHRequest request, GHResponse rsp, SpeedProvider speedProvider )
     {
         if (ghStorage == null || !fullyLoaded)
             throw new IllegalStateException("Call load or importOrLoad before routing");
@@ -1068,7 +1086,7 @@ public class GraphHopper implements GraphHopperAPI
             weighting = getWeightingForCH(request.getHints(), encoder);
             routingGraph = ghStorage.getGraph(CHGraph.class, weighting);
         } else
-            weighting = createWeighting(request.getHints(), encoder);
+            weighting = createWeighting(request.getHints(), encoder, speedProvider);
 
         RoutingAlgorithmFactory tmpAlgoFactory = getAlgorithmFactory(weighting);
         QueryGraph queryGraph = new QueryGraph(routingGraph);
@@ -1111,10 +1129,8 @@ public class GraphHopper implements GraphHopperAPI
 
             sw = new StopWatch().start();
             Path path = algo.calcPath(fromQResult.getClosestNode(), toQResult.getClosestNode());
-
-            //Update time to profile of user
-            if(vehicle.equals("genbike"))
-                path.updateTime(request.getHints());
+            path.setSpeedProvider(speedProvider);
+            path.updateTime();
 
             if (path.getTime() < 0)
                 throw new RuntimeException("Time was negative. Please report as bug and include:" + request);
@@ -1286,6 +1302,17 @@ public class GraphHopper implements GraphHopperAPI
     private String formatDateTime( Date date )
     {
         return new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ").format(date);
+    }
+
+    private SpeedProvider initSpeedProvider(String profile, FlagEncoder encoder) {
+
+        ProfileManager profileManager = new ProfileManager(new ProfileRepository());
+
+        if(!profile.equals("")) {
+            profileManager.init(profile, (BikeGenericFlagEncoder) encoder);
+        }
+
+        return new ProfileSpeedProvider(encoder, profileManager);
     }
 
     protected void ensureNotLoaded()

@@ -83,8 +83,10 @@ public class ProfileManager {
         if(!hasProfile())
             return Double.NaN;
 
-        if(hasSpeedProfile(wayType))
+        if(hasSpeedProfile(wayType)) {
+            //System.out.println("SLOPE: " + slopeIndex + ", SPEED: " + userSpeeds.get(wayType)[slopeIndex] + ", WAY: " + wayType);
             return userSpeeds.get(wayType)[slopeIndex];
+        }
 
         if(bestFit > 0){
             double adjustment = (double) flagEncoder.getWayTypeSpeed(wayType) / flagEncoder.getWayTypeSpeed(bestFit);
@@ -99,17 +101,21 @@ public class ProfileManager {
 
         ArrayList<WeightedObservedPoint> points = new ArrayList<WeightedObservedPoint>();
 
-        double maxSpeed = ridersProfile.maxSpeed(wayType, flagEncoder.getMaxSpeed());
+        double maxSpeed = ridersProfile.maxSpeed(wayType, flagEncoder.getWayTypeSpeed(wayType));
 
-        addControlPoints(points, wayType, flagEncoder.getWayTypeSpeed(wayType), maxSpeed);
+        //addControlPoints(points, wayType, flagEncoder.getWayTypeSpeed(wayType), maxSpeed);
 
         for ( int i = 0; i < ridersEntries.length; i++){
             if(ridersEntries[i] != null) {
-                points.add(new WeightedObservedPoint(ridersEntries[i].getDistance(), i - RidersProfile.SLOPES / 2, ridersEntries[i].getSpeed() / maxSpeed));
+                double weight = ridersEntries[i].getDistance();
+                int slope = i - (RidersProfile.SLOPES / 2);
+                double speed = ridersEntries[i].getSpeed() / maxSpeed;
+                System.out.println("WEIGHT: " + weight + ", SLOPE: " + slope + ", SPEED: " + speed);
+                points.add(new WeightedObservedPoint(weight, slope, speed));
             }
         }
 
-        //addControlPoints(points, wayType, flagEncoder.getWayTypeSpeed(wayType), maxSpeed);
+        addControlPoints(points, flagEncoder.getWayTypeSpeed(wayType), maxSpeed);
 
         final double[] coef = new SigmoidalFitter(new double[]{1, 0.5, -1}).fit(points);
         SigmoidFunction sigF = new SigmoidFunction();
@@ -120,25 +126,26 @@ public class ProfileManager {
 
         for( int i = - offset; i < offset + 1; i++){
             result[i + offset] = sigF.value(i, coef) * maxSpeed;
+            System.out.println("WAYTYPE: " + wayType + ", SLOPE: " + i + ", SPEED" + result[i + offset]);
         }
 
         return result;
     }
 
-    private void addControlPoints(ArrayList<WeightedObservedPoint> points, int wayType, double baseSpeed, double maxSpeed) {
+    private void addControlPoints(ArrayList<WeightedObservedPoint> points, double baseSpeed, double maxSpeed) {
 
-        double weight = totalDistance / 1000;
+        double weight = 50;
 
-        //Add control points from +10 to -10 (this is the critical zone)
+        //Add control points from +12 to -12 (this is the critical zone)
 
-        for (int i = -12; i < 0; i++) {
-            double fwdFaster = Math.sqrt(1 + 30 * (i * (-1) / 100));
+        for (int i = 12; i > 0; i--) {
+            double fwdFaster = Math.sqrt(1 + 30 * ((double)i / 100));
             double speed = keepIn(fwdFaster * baseSpeed, baseSpeed, maxSpeed);
-            points.add(new WeightedObservedPoint(weight, i, speed / maxSpeed));
+            points.add(new WeightedObservedPoint(weight, -i, speed / maxSpeed));
         }
 
         for (int i = 0; i <= 12; i++) {
-            double fwdSlower = Math.sqrt(1 - 5 * (i/100));
+            double fwdSlower = Math.pow(1 - 5 * ((double)i/100), 2);
             double speed = keepIn(fwdSlower * baseSpeed, 2, baseSpeed);
             points.add(new WeightedObservedPoint(weight, i, speed / maxSpeed));
         }
