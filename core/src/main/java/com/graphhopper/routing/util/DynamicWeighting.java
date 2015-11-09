@@ -19,8 +19,11 @@
 package com.graphhopper.routing.util;
 
 import com.graphhopper.util.EdgeIteratorState;
+import com.graphhopper.util.Helper;
 import com.graphhopper.util.PMap;
 import com.graphhopper.util.profiles.ProfileManager;
+
+import java.util.Set;
 
 /**
  * Special weighting for (motor)bike
@@ -35,6 +38,7 @@ public class DynamicWeighting implements Weighting
     private final double heading_penalty;
     protected final FlagEncoder flagEncoder;
     protected SpeedProvider speedProvider;
+    protected PreferenceProvider preferenceProvider;
     protected ProfileManager profileManager;
 
     /**
@@ -56,10 +60,13 @@ public class DynamicWeighting implements Weighting
 
         this.profileManager = profileManager;
 
-        if(profileManager == null)
+        if(profileManager == null) {
             this.speedProvider = new EncoderSpeedProvider(encoder);
-        else
+            this.preferenceProvider = new GenericPreferenceProvider();
+        } else {
             this.speedProvider = new ProfileSpeedProvider(encoder, profileManager);
+            this.preferenceProvider = new ProfilePreferenceProvider(profileManager);
+        }
     }
 
     public DynamicWeighting(FlagEncoder encoder)
@@ -82,61 +89,38 @@ public class DynamicWeighting implements Weighting
         if (penalizeEdge)
             time += heading_penalty;
 
-        return time / (0.5 + Math.pow(getUserPreference(edgeState, reverse), 2));
+        return time / (0.5 + Math.pow(getEdgePreference(edgeState, reverse), 2));
     }
 
-    private double getUserPreference(EdgeIteratorState edgeState, boolean reverse) {
+    protected double getEdgePreference(EdgeIteratorState edgeState, boolean reverse) {
 
         int wayType = (int) flagEncoder.getDouble(edgeState.getFlags(), DynamicWeighting.WAY_TYPE_KEY);
         int priority = PriorityCode.UNCHANGED.getValue();
-
         double incDistPercentage = flagEncoder.getDouble(edgeState.getFlags(), DynamicWeighting.INC_DIST_PERCENTAGE_KEY) / 100;
-        double incElevation;
+        boolean pavedSurface = ((wayType >= 1 && wayType <= 4) || wayType == 7 || wayType == 13);
+
+        double incSlope;
         double incDist2DSum;
+        double decSlope;
+        double decDist2DSum;
 
         if(reverse){
-            incElevation = flagEncoder.getDouble(edgeState.getFlags(), DynamicWeighting.DEC_SLOPE_KEY) / 100;
+            incSlope = flagEncoder.getDouble(edgeState.getFlags(), DynamicWeighting.DEC_SLOPE_KEY) / 100;
+            decSlope = flagEncoder.getDouble(edgeState.getFlags(), DynamicWeighting.INC_SLOPE_KEY) / 100;
             incDist2DSum = (1 - incDistPercentage) * edgeState.getDistance();
+            decDist2DSum = edgeState.getDistance() - incDist2DSum;
         } else {
-            incElevation = flagEncoder.getDouble(edgeState.getFlags(), DynamicWeighting.INC_SLOPE_KEY) / 100;
+            incSlope = flagEncoder.getDouble(edgeState.getFlags(), DynamicWeighting.INC_SLOPE_KEY) / 100;
+            decSlope = flagEncoder.getDouble(edgeState.getFlags(), DynamicWeighting.DEC_SLOPE_KEY) / 100;
             incDist2DSum = edgeState.getDistance() * incDistPercentage;
+            decDist2DSum = edgeState.getDistance() - incDist2DSum;
         }
 
-        if(wayType == 0)
-            priority = PriorityCode.AVOID_AT_ALL_COSTS.getValue();
-        else if(wayType == 13 || wayType == 14)
-            priority = PriorityCode.BEST.getValue();
-        else if(wayType == 7 && wayType == 8){
+        priority += preferenceProvider.calcWayTypePreference(wayType);
+        priority += preferenceProvider.calcSurfacePreference(pavedSurface);
+        priority += preferenceProvider.calcSlopePreference(wayType, incSlope, incDist2DSum, decSlope, decDist2DSum);
 
-            priority = PriorityCode.AVOID_IF_POSSIBLE.getValue();
-
-            if(incDist2DSum > 10 && incElevation > 0.02) {
-                priority = PriorityCode.AVOID_AT_ALL_COSTS.getValue();
-            }
-
-        }
-        else if(wayType == 9 && wayType == 10) {
-
-            priority = PriorityCode.REACH_DEST.getValue();
-
-            if(incDist2DSum > 10 && incElevation > 0.02) {
-                priority = PriorityCode.WORST.getValue();
-            }
-
-        } else if (wayType == 11 || wayType == 12) {
-            //Should be considered only for Downhill racers
-            priority = PriorityCode.WORST.getValue();
-        } else if (wayType >= 2 && wayType <= 4){
-            priority = PriorityCode.PREFER.getValue();
-        } else if (wayType == 15){
-            priority = PriorityCode.WORST.getValue();
-        }
-
-        //If it is very steep don't use it
-        if(incDist2DSum > 10 && incElevation > 0.2)
-            priority = PriorityCode.WORST.getValue();
-
-        return (double) priority / PriorityCode.BEST.getValue();
+        return Helper.keepIn(priority, PriorityCode.WORST.getValue(), PriorityCode.BEST.getValue()) / PriorityCode.BEST.getValue();
 
     }
 

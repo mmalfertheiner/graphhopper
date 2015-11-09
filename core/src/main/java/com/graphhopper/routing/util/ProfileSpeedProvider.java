@@ -27,25 +27,29 @@ public class ProfileSpeedProvider extends EncoderSpeedProvider {
 
         if(profileManager.hasFilteredSpeeds()){
 
-            int incElevation = (int) encoder.getDouble(edgeState.getFlags(), DynamicWeighting.INC_SLOPE_KEY);
-            int decElevation = (int) encoder.getDouble(edgeState.getFlags(), DynamicWeighting.DEC_SLOPE_KEY);
-            double incDistPercentage = encoder.getDouble(edgeState.getFlags(), DynamicWeighting.INC_DIST_PERCENTAGE_KEY) / 100;
+            int incElevation;
+            int decElevation;
+            double incDistPercentage;
+
+            if(reverse){
+                incElevation = (int) encoder.getDouble(edgeState.getFlags(), DynamicWeighting.DEC_SLOPE_KEY);
+                decElevation = (int) encoder.getDouble(edgeState.getFlags(), DynamicWeighting.INC_SLOPE_KEY);
+                incDistPercentage =  1 - (encoder.getDouble(edgeState.getFlags(), DynamicWeighting.INC_DIST_PERCENTAGE_KEY) / 100);
+            } else {
+                incElevation = (int) encoder.getDouble(edgeState.getFlags(), DynamicWeighting.INC_SLOPE_KEY);
+                decElevation = (int) encoder.getDouble(edgeState.getFlags(), DynamicWeighting.DEC_SLOPE_KEY);
+                incDistPercentage = encoder.getDouble(edgeState.getFlags(), DynamicWeighting.INC_DIST_PERCENTAGE_KEY) / 100;
+            }
 
             int incIndex = incElevation > RidersProfile.SLOPES / 2 ? RidersProfile.SLOPES : RidersProfile.SLOPES / 2 + incElevation;
             int decIndex = decElevation > RidersProfile.SLOPES / 2 ? 0 : RidersProfile.SLOPES / 2 - decElevation;
 
-            double incSpeed = profileManager.getSpeedPerSlope(wayType, incIndex, (BikeGenericFlagEncoder) encoder);
-            double decSpeed = profileManager.getSpeedPerSlope(wayType, decIndex, (BikeGenericFlagEncoder) encoder);
-
+            double incSpeed = profileManager.getSpeedPerSlope(wayType, incIndex, encoder.getSpeed(edgeState.getFlags()), (BikeGenericFlagEncoder) encoder);
+            double decSpeed = profileManager.getSpeedPerSlope(wayType, decIndex, encoder.getSpeed(edgeState.getFlags()), (BikeGenericFlagEncoder) encoder);
             double incDist2DSum = edgeState.getDistance() * incDistPercentage;
             double decDist2DSum = edgeState.getDistance() - incDist2DSum;
 
-            if (reverse)
-            {
-                speed = keepIn((decSpeed * incDist2DSum + incSpeed * decDist2DSum) / edgeState.getDistance(), BikeGenericFlagEncoder.PUSHING_SECTION_SPEED / 2, 50);
-            } else {
-                speed = keepIn((incSpeed * incDist2DSum + decSpeed * decDist2DSum) / edgeState.getDistance(), BikeGenericFlagEncoder.PUSHING_SECTION_SPEED / 2, 50);
-            }
+            speed = keepIn((incSpeed * incDist2DSum + decSpeed * decDist2DSum) / edgeState.getDistance(), BikeGenericFlagEncoder.PUSHING_SECTION_SPEED / 2, 50);
 
         }
 

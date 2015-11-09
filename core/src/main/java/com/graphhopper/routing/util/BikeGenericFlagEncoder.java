@@ -299,7 +299,7 @@ public class BikeGenericFlagEncoder extends AbstractFlagEncoder
             return acceptBit;
 
         // accept only if explicitely tagged for bike usage
-        if ("motorway".equals(highwayValue) || "motorway_link".equals(highwayValue))
+        if ("motorway".equals(highwayValue) || "motorway_link".equals(highwayValue) || "trunk".equals(highwayValue) || "trunk_link".equals(highwayValue))
             return 0;
 
         if (way.hasTag("motorroad", "yes"))
@@ -320,9 +320,6 @@ public class BikeGenericFlagEncoder extends AbstractFlagEncoder
         String sacScale = way.getTag("sac_scale");
         if (sacScale != null)
         {
-            if ((way.hasTag("highway", "cycleway"))
-                    && (way.hasTag("sac_scale", "hiking")))
-                return acceptBit;
             if (!allowedSacScale(sacScale))
                 return 0;
         }
@@ -334,7 +331,7 @@ public class BikeGenericFlagEncoder extends AbstractFlagEncoder
         // other scales are nearly impossible by an ordinary bike, see http://wiki.openstreetmap.org/wiki/Key:sac_scale
         // Mountainhiking may be possible for downhill racers
         return "hiking".equals(sacScale) || "mountain_hiking".equals(sacScale)
-                || "demanding_mountain_hiking".equals(sacScale) || "alpine_hiking".equals(sacScale);
+                || "demanding_mountain_hiking".equals(sacScale);
     }
 
     @Override
@@ -523,7 +520,7 @@ public class BikeGenericFlagEncoder extends AbstractFlagEncoder
                 wayType = WayType.TRACK_EASY;
         }
         else if ("path".equals(highway)) {
-            if("horrible".equals(smoothness) || "very_horrible".equals(smoothness) || "mountain_hiking".equals(sacScale) || "4".equals(mtbScale) || "5".equals(mtbScale))
+            if("horrible".equals(smoothness) || "very_horrible".equals(smoothness) || "demanding_mountain_hiking".equals(sacScale) || "mountain_hiking".equals(sacScale) || "4".equals(mtbScale) || "5".equals(mtbScale))
                 wayType = WayType.PATH_HARD;
             else if("bad".equals(smoothness) || "very_bad".equals(smoothness) || "hiking".equals(sacScale) || "1".equals(mtbScale) || "3".equals(mtbScale) && !pavedSurfaceTags.contains(surfaceTag) && !way.hasTag("bicycle", intendedValues))
                 wayType = WayType.PATH_MIDDLE;

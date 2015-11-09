@@ -2,6 +2,7 @@ package com.graphhopper.util.profiles;
 
 
 import com.graphhopper.routing.util.BikeGenericFlagEncoder;
+import com.graphhopper.util.EdgeIteratorState;
 import org.apache.commons.math3.fitting.WeightedObservedPoint;
 
 import java.util.ArrayList;
@@ -20,6 +21,7 @@ public class ProfileManager {
     private short[] counts = new short[RidersProfile.WAY_TYPES];
     private double[] distances = new double[RidersProfile.WAY_TYPES];
     private Map<Integer, double[]> userSpeeds;
+    private boolean pavedSurfacePerferred;
 
     public ProfileManager(ProfileRepository profileRepository){
         this.profileRepository = profileRepository;
@@ -60,6 +62,8 @@ public class ProfileManager {
 
             }
 
+            initSurfacePreference();
+
         }
 
         return this;
@@ -82,7 +86,23 @@ public class ProfileManager {
         return distances[wayType] / totalDistance;
     }
 
-    public double getSpeedPerSlope(int wayType, int slopeIndex, BikeGenericFlagEncoder flagEncoder) {
+    public boolean prefersPavedSurface(){
+        return pavedSurfacePerferred;
+    }
+
+    private void initSurfacePreference(){
+
+        double distance = 0;
+        int[] pavedSurfaceTypes = new int[]{0,1,2,3,4,7,13};
+
+        for(int i = 0; i < pavedSurfaceTypes.length; i++){
+            distance += distances[pavedSurfaceTypes[i]];
+        }
+
+        pavedSurfacePerferred = (distance / totalDistance) >= 0.5 ? true : false;
+    }
+
+    public double getSpeedPerSlope(int wayType, int slopeIndex, double baseSpeed, BikeGenericFlagEncoder flagEncoder) {
 
         if(!hasProfile())
             return Double.NaN;
@@ -93,7 +113,7 @@ public class ProfileManager {
         }
 
         if(bestFit > 0){
-            double adjustment = (double) flagEncoder.getWayTypeSpeed(wayType) / flagEncoder.getWayTypeSpeed(bestFit);
+            double adjustment = baseSpeed / flagEncoder.getWayTypeSpeed(bestFit);
             return userSpeeds.get(bestFit)[slopeIndex] * adjustment;
         }
 
