@@ -988,11 +988,9 @@ public class GraphHopper implements GraphHopperAPI
     {
         GHResponse response = new GHResponse();
         ProfileManager profileManager = null;
-        SpeedProvider speedProvider = null;
 
         if(request.getVehicle().equals("genbike")) {
             profileManager = initProfile(request.getHints().get("profile", ""), encodingManager.getEncoder(request.getVehicle()));
-            speedProvider = new ProfileSpeedProvider(encodingManager.getEncoder(request.getVehicle()), profileManager);
         }
 
         List<Path> paths = getPaths(request, response, profileManager);

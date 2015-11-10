@@ -60,12 +60,12 @@ public class DynamicWeighting implements Weighting
 
         this.profileManager = profileManager;
 
-        if(profileManager == null) {
-            this.speedProvider = new EncoderSpeedProvider(encoder);
-            this.preferenceProvider = new GenericPreferenceProvider();
-        } else {
+        if(profileManager != null && profileManager.hasProfile()) {
             this.speedProvider = new ProfileSpeedProvider(encoder, profileManager);
             this.preferenceProvider = new ProfilePreferenceProvider(profileManager);
+        } else {
+            this.speedProvider = new EncoderSpeedProvider(encoder);
+            this.preferenceProvider = new GenericPreferenceProvider();
         }
     }
 
@@ -89,7 +89,7 @@ public class DynamicWeighting implements Weighting
         if (penalizeEdge)
             time += heading_penalty;
 
-        return time / (0.5 + Math.pow(getEdgePreference(edgeState, reverse), 2));
+        return time / Math.pow((0.5 + getEdgePreference(edgeState, reverse)), 2);
     }
 
     protected double getEdgePreference(EdgeIteratorState edgeState, boolean reverse) {
@@ -119,6 +119,8 @@ public class DynamicWeighting implements Weighting
         priority += preferenceProvider.calcWayTypePreference(wayType);
         priority += preferenceProvider.calcSurfacePreference(pavedSurface);
         priority += preferenceProvider.calcSlopePreference(wayType, incSlope, incDist2DSum, decSlope, decDist2DSum);
+
+        System.out.println("WAYTYPE: " + wayType + ", INC SLOPE: " + incSlope + ", DEC SLOPE: " + decSlope +", PRIORITY: " + Helper.keepIn(priority, PriorityCode.WORST.getValue(), PriorityCode.BEST.getValue()));
 
         return Helper.keepIn(priority, PriorityCode.WORST.getValue(), PriorityCode.BEST.getValue()) / PriorityCode.BEST.getValue();
 
