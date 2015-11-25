@@ -28,6 +28,8 @@ public class LowPrecisionSRTMProvider extends SRTMProvider
         // 1113 vs new:
         provider.setCalcMean(true);
         System.out.println(provider.getEle(47.467753, 14.573911));
+
+        System.out.println(provider.getEle(45.95115, 10.884705));
     }
 
     public LowPrecisionSRTMProvider()

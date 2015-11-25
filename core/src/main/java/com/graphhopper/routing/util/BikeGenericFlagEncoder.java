@@ -353,8 +353,6 @@ public class BikeGenericFlagEncoder extends AbstractFlagEncoder
                     code = BicycleNetworkCode.REGIONAL_CYCLING_ROUTES.getValue();
                 else if (network.equalsIgnoreCase("lcn"))
                     code = BicycleNetworkCode.LOCAL_CYCLING_ROUTES.getValue();
-                else if (network.equalsIgnoreCase("mtb"))
-                    code = BicycleNetworkCode.MOUNTAIN_BIKE_ROUTE.getValue();
                 else if (network.equalsIgnoreCase("deprecated"))
                     code = BicycleNetworkCode.DEPRECATED.getValue();
             }

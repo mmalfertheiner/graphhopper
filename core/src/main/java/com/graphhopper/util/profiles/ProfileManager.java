@@ -108,8 +108,8 @@ public class ProfileManager {
             return Double.NaN;
 
         if(hasSpeedProfile(wayType)) {
-            //System.out.println("SLOPE: " + slopeIndex + ", SPEED: " + userSpeeds.get(wayType)[slopeIndex] + ", WAY: " + wayType);
-            return userSpeeds.get(wayType)[slopeIndex];
+            double adjustment = baseSpeed / flagEncoder.getWayTypeSpeed(wayType);
+            return userSpeeds.get(wayType)[slopeIndex] * adjustment;
         }
 
         if(bestFit > 0){
