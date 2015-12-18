@@ -264,10 +264,12 @@ public class BikeGenericFlagEncoder extends AbstractFlagEncoder
 
         // swap slopes
         double incValue = inclineSlopeEncoder.getDoubleValue(flags);
-        flags = inclineSlopeEncoder.setDoubleValue(flags, declineSlopeEncoder.getDoubleValue(flags));
+        double decValue = declineSlopeEncoder.getDoubleValue(flags);
+        flags = inclineSlopeEncoder.setDoubleValue(flags, decValue);
         double inclineDistPercentage = 100 - inclineDistancePercentageEncoder.getDoubleValue(flags);
         flags = inclineDistancePercentageEncoder.setDoubleValue(flags, inclineDistPercentage);
-        return declineSlopeEncoder.setDoubleValue(flags, incValue);
+        flags = declineSlopeEncoder.setDoubleValue(flags, incValue);
+        return flags;
     }
 
     @Override
@@ -488,7 +490,7 @@ public class BikeGenericFlagEncoder extends AbstractFlagEncoder
         WayType wayType = WayType.SMALL_WAY_PAVED;
         boolean isPushingSection = isPushingSection(way);
 
-        if (isPushingSection && !(partOfCycleRelation > BicycleNetworkCode.FERRY.getValue()) || "steps".equals(highway) || "ice".equals(surfaceTag))
+        if (isPushingSection && !(partOfCycleRelation > BicycleNetworkCode.FERRY.getValue()) || "ice".equals(surfaceTag))
             wayType = WayType.PUSHING_SECTION;
         else if ("motorway".equals(highway) || "motorway_link".equals(highway) || "trunk".equals(highway) || "trunk_link".equals(highway))
             wayType = WayType.MOTORWAY;
@@ -520,13 +522,13 @@ public class BikeGenericFlagEncoder extends AbstractFlagEncoder
         else if ("path".equals(highway)) {
             if("horrible".equals(smoothness) || "very_horrible".equals(smoothness) || "demanding_mountain_hiking".equals(sacScale) || "mountain_hiking".equals(sacScale) || "4".equals(mtbScale) || "5".equals(mtbScale))
                 wayType = WayType.PATH_HARD;
-            else if("bad".equals(smoothness) || "very_bad".equals(smoothness) || "hiking".equals(sacScale) || "1".equals(mtbScale) || "3".equals(mtbScale) && !pavedSurfaceTags.contains(surfaceTag) && !way.hasTag("bicycle", intendedValues))
+            else if("bad".equals(smoothness) || "very_bad".equals(smoothness) || "hiking".equals(sacScale) || "1".equals(mtbScale) || "2".equals(mtbScale) || "3".equals(mtbScale) && !pavedSurfaceTags.contains(surfaceTag) && !way.hasTag("bicycle", intendedValues))
                 wayType = WayType.PATH_MIDDLE;
             else
                 wayType = WayType.PATH_EASY;
         }
 
-        if(partOfCycleRelation == BicycleNetworkCode.MOUNTAIN_BIKE_ROUTE.getValue()){
+        if(partOfCycleRelation == BicycleNetworkCode.MOUNTAIN_BIKE_ROUTE.getValue() || (way.hasTag("bicycle", "designated") && !pavedSurfaceTags.contains(surfaceTag))){
             wayType = WayType.MTB_CYCLEWAY;
         } else if ("cycleway".equals(highway) || way.hasTag("bicycle", "designated") || (partOfCycleRelation > BicycleNetworkCode.FERRY.getValue()))
         {

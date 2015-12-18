@@ -134,7 +134,6 @@ public class ProfileManager {
                 double weight = ridersEntries[i].getDistance();
                 int slope = i - (RidersProfile.SLOPES / 2);
                 double speed = ridersEntries[i].getSpeed() / maxSpeed;
-                System.out.println("WEIGHT: " + weight + ", SLOPE: " + slope + ", SPEED: " + speed);
                 points.add(new WeightedObservedPoint(weight, slope, speed));
             }
         }
@@ -150,7 +149,6 @@ public class ProfileManager {
 
         for( int i = - offset; i < offset + 1; i++){
             result[i + offset] = sigF.value(i, coef) * maxSpeed;
-            System.out.println("WAYTYPE: " + wayType + ", SLOPE: " + i + ", SPEED" + result[i + offset]);
         }
 
         return result;

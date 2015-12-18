@@ -42,7 +42,7 @@ public class ProfilePreferenceProvider extends GenericPreferenceProvider {
         else if(!profileManager.prefersPavedSurface() && pavedSurface)
             preference = -2;
 
-        System.out.println("PREFERENCE: " + preference + ", profileManager: " + profileManager.prefersPavedSurface());
+        //System.out.println("PREFERENCE: " + preference + ", profileManager: " + profileManager.prefersPavedSurface());
 
         return preference;
     }

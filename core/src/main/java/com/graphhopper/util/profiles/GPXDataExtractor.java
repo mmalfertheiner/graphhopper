@@ -27,8 +27,8 @@ public class GPXDataExtractor {
     private List<TrackPart> trackParts;
     private MapMatching mapMatching;
     private BikeGenericFlagEncoder encoder;
-    private int filterType = FILTER_KALMAN_FORWARD;
-    private int filterDistance = 100;
+    private int filterType = FILTER_KALMAN_COMBINED;
+    private int filterDistance = 60;
 
     private double[] distances;
     private double[] elevations;
@@ -134,7 +134,6 @@ public class GPXDataExtractor {
             double secondLon = inputGPXEntries.get(i).getLon();
 
             distances[i-1] = distCalc.calcDist(firstLat, firstLon, secondLat, secondLon);
-            System.out.print(", " + distances[i-1]);
             elevations[i] = inputGPXEntries.get(i).getEle();
 
         }
