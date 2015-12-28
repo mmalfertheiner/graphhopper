@@ -37,3 +37,4 @@ android/.gradle
 .project
 local.properties
 tracks/
+gpx/
