@@ -23,14 +23,13 @@ import com.graphhopper.storage.Graph;
 import com.graphhopper.storage.NodeAccess;
 import com.graphhopper.util.*;
 import com.graphhopper.util.profiles.ProfileManager;
+import com.graphhopper.util.profiles.ProfileRepository;
 import com.graphhopper.util.profiles.RidersProfile;
 import gnu.trove.list.TIntList;
 import gnu.trove.list.array.TIntArrayList;
 
 import java.util.ArrayList;
 import java.util.List;
-
-import static com.graphhopper.util.Helper.keepIn;
 
 /**
  * Stores the nodes for the found path of an algorithm. It additionally needs the edgeIds to make
@@ -58,6 +57,8 @@ public class Path
     private TIntList edgeIds;
     private double weight;
     private NodeAccess nodeAccess;
+    private String profile;
+    private SpeedProvider speedProvider;
 
     public Path( Graph graph, FlagEncoder encoder )
     {
@@ -175,6 +176,14 @@ public class Path
         return this;
     }
 
+    public Path initSpeedProvider( final ProfileManager profileManager){
+        if(profileManager == null)
+            return this;
+
+        this.speedProvider = new ProfileSpeedProvider(encoder, profileManager);
+        return this;
+    }
+
     /**
      * Extracts the Path from the shortest-path-tree determined by edgeEntry.
      */
@@ -252,6 +261,24 @@ public class Path
             throw new IllegalStateException("Speed cannot be 0 for unblocked edge, use access properties to mark edge blocked! Should only occur for shortest path calculation. See #242.");
 
         return (long) (distance * 3600 / speed);
+    }
+
+    protected long calcMillis( EdgeIteratorState edge, boolean revert) {
+
+        if (revert && !encoder.isBackward(edge.getFlags())
+                || !revert && !encoder.isForward(edge.getFlags()))
+            throw new IllegalStateException("Calculating time should not require to read speed from edge in wrong direction. "
+                    + "Reverse:" + revert + ", fwd:" + encoder.isForward(edge.getFlags()) + ", bwd:" + encoder.isBackward(edge.getFlags()));
+
+        double speed = speedProvider.calcSpeed(edge, revert);
+
+        if (Double.isInfinite(speed) || Double.isNaN(speed) || speed < 0)
+            throw new IllegalStateException("Invalid speed stored in edge! " + speed);
+
+        if (speed == 0)
+            throw new IllegalStateException("Speed cannot be 0 for unblocked edge, use access properties to mark edge blocked! Should only occur for shortest path calculation. See #242.");
+
+        return (long) (edge.getDistance() * 3600 / speed);
     }
 
     /**
@@ -369,38 +396,19 @@ public class Path
         return points;
     }
 
-    public void updateTime(PMap params){
+    public void updateTime(){
 
+        if(speedProvider == null)
+            return;
         time = 0;
-        String profileName = params.get("profile", "");
-        RidersProfile ridersProfile = null;
-
-        if(!profileName.equals(""))
-            ridersProfile = new ProfileManager().getProfile(profileName);
-
-        final SpeedProvider speedProvider = new ProfileSpeedProvider(encoder, ridersProfile);
 
         forEveryEdge(new EdgeVisitor() {
 
             @Override
             public void next(EdgeIteratorState edgeBase, int index) {
 
-                double speed = speedProvider.calcSpeed(edgeBase, false);
+                time += calcMillis(edgeBase, false);
 
-                if (Double.isInfinite(speed) || Double.isNaN(speed) || speed < 0)
-                    throw new IllegalStateException("Invalid speed stored in edge! " + speed);
-
-                if (speed == 0)
-                    throw new IllegalStateException("Speed cannot be 0 for unblocked edge, use access properties to mark edge blocked! Should only occur for shortest path calculation. See #242.");
-
-                double edgeTime = edgeBase.getDistance() / speed * 3600;
-
-                // add direction penalties at start/stop/via points
-                boolean penalizeEdge = edgeBase.getBoolean(EdgeIteratorState.K_UNFAVORED_EDGE, false, false);
-                if (penalizeEdge)
-                    edgeTime += 300; //pMap.getDouble("heading_penalty", DEFAULT_HEADING_PENALTY);
-
-                time += edgeTime;
             }
         });
 
@@ -661,8 +669,12 @@ public class Path
                 }
                 double newDist = edge.getDistance();
                 prevInstruction.setDistance(newDist + prevInstruction.getDistance());
-                long flags = edge.getFlags();
-                prevInstruction.setTime(calcMillis(newDist, flags, false) + prevInstruction.getTime());
+                if(speedProvider != null) {
+                    prevInstruction.setTime(calcMillis(edge, false) + prevInstruction.getTime());
+                } else {
+                    long flags = edge.getFlags();
+                    prevInstruction.setTime(calcMillis(newDist, flags, false) + prevInstruction.getTime());
+                }
             }
         });
 

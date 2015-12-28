@@ -167,7 +167,8 @@ public abstract class SRTMProvider implements ElevationProvider
 
                     processFile(heights, bytes, file);
 
-                    // demProvider.toImage("x" + file.getName() + ".png");
+                    //demProvider.toImage("x" + file.getName() + ".png");
+                    //System.out.println("x" + file.getName() + ".png");
                     // TODO remove hgt and zip?
                 } catch (Exception ex)
                 {

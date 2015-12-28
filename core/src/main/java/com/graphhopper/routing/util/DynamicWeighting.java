@@ -22,11 +22,8 @@ import com.graphhopper.util.EdgeIteratorState;
 import com.graphhopper.util.Helper;
 import com.graphhopper.util.PMap;
 import com.graphhopper.util.profiles.ProfileManager;
-import com.graphhopper.util.profiles.RidersProfile;
 
-import java.util.Map;
-
-import static com.graphhopper.util.Helper.keepIn;
+import java.util.Set;
 
 /**
  * Special weighting for (motor)bike
@@ -40,7 +37,9 @@ public class DynamicWeighting implements Weighting
     final static double DEFAULT_HEADING_PENALTY = 300; //[s]
     private final double heading_penalty;
     protected final FlagEncoder flagEncoder;
-    protected RidersProfile profile;
+    protected SpeedProvider speedProvider;
+    protected PreferenceProvider preferenceProvider;
+    protected ProfileManager profileManager;
 
     /**
      * For now used only in BikeGenericFlagEncoder
@@ -51,28 +50,33 @@ public class DynamicWeighting implements Weighting
     public static final int WAY_TYPE_KEY = 105;
 
 
-    public DynamicWeighting(FlagEncoder encoder, PMap pMap)
+    public DynamicWeighting(FlagEncoder encoder, PMap pMap, ProfileManager profileManager)
     {
         if (!encoder.isRegistered())
             throw new IllegalStateException("Make sure you add the FlagEncoder " + encoder + " to an EncodingManager before using it elsewhere");
 
         this.flagEncoder = encoder;
         heading_penalty = pMap.getDouble("heading_penalty", DEFAULT_HEADING_PENALTY);
-        String user = pMap.get("profile", "");
-        profile = new ProfileManager().getProfile(user);
 
+        this.profileManager = profileManager;
+
+        if(profileManager != null && profileManager.hasProfile()) {
+            this.speedProvider = new ProfileSpeedProvider(encoder, profileManager);
+            this.preferenceProvider = new ProfilePreferenceProvider(profileManager);
+        } else {
+            this.speedProvider = new EncoderSpeedProvider(encoder);
+            this.preferenceProvider = new GenericPreferenceProvider();
+        }
     }
 
     public DynamicWeighting(FlagEncoder encoder)
     {
-        this(encoder, new PMap(0));
+        this(encoder, new PMap(0), null);
     }
 
     @Override
     public double calcWeight( EdgeIteratorState edgeState, boolean reverse, int prevOrNextEdgeId )
     {
-        SpeedProvider speedProvider = new ProfileSpeedProvider(flagEncoder, profile);
-
         double speed = speedProvider.calcSpeed(edgeState, reverse);
 
         if (speed == 0)
@@ -85,39 +89,42 @@ public class DynamicWeighting implements Weighting
         if (penalizeEdge)
             time += heading_penalty;
 
-        return time / (0.5 + getUserPreference(edgeState));
+        System.out.println("ID: " + edgeState.getEdge() + ", REVERSE: " + reverse + ", TIME: " + time);
+
+        return time / Math.pow((0.5 + getEdgePreference(edgeState, reverse)), 2);
     }
 
-    private double getUserPreference(EdgeIteratorState edgeState) {
+    protected double getEdgePreference(EdgeIteratorState edgeState, boolean reverse) {
 
         int wayType = (int) flagEncoder.getDouble(edgeState.getFlags(), DynamicWeighting.WAY_TYPE_KEY);
         int priority = PriorityCode.UNCHANGED.getValue();
-
-        double incElevation = flagEncoder.getDouble(edgeState.getFlags(), DynamicWeighting.INC_SLOPE_KEY) / 100;
         double incDistPercentage = flagEncoder.getDouble(edgeState.getFlags(), DynamicWeighting.INC_DIST_PERCENTAGE_KEY) / 100;
-        double incDist2DSum = edgeState.getDistance() * incDistPercentage;
+        boolean pavedSurface = ((wayType >= 1 && wayType <= 4) || wayType == 7 || wayType == 13);
 
-        if(wayType == 13 || wayType == 14)
-            priority = PriorityCode.BEST.getValue();
-        else if(wayType >= 10 && wayType <= 12) {
+        double incSlope;
+        double incDist2DSum;
+        double decSlope;
+        double decDist2DSum;
 
-            priority = PriorityCode.AVOID_IF_POSSIBLE.getValue();
-
-            if(incDist2DSum > 10 && incElevation > 0.02) {
-                priority = PriorityCode.AVOID_AT_ALL_COSTS.getValue();
-                //System.out.println(wayType + ": elevation: " + incElevation + ": " + incDist2DSum);
-
-                if(incElevation > 0.1){
-                    priority = PriorityCode.WORST.getValue();
-                }
-            }
-        } else if (wayType >= 2 && wayType <= 6){
-            priority = PriorityCode.PREFER.getValue();
-        } else if (wayType == 15){
-            priority = PriorityCode.WORST.getValue();
+        if(reverse){
+            incSlope = flagEncoder.getDouble(edgeState.getFlags(), DynamicWeighting.DEC_SLOPE_KEY) / 100;
+            decSlope = flagEncoder.getDouble(edgeState.getFlags(), DynamicWeighting.INC_SLOPE_KEY) / 100;
+            incDistPercentage = 1.0 - incDistPercentage;
+        } else {
+            incSlope = flagEncoder.getDouble(edgeState.getFlags(), DynamicWeighting.INC_SLOPE_KEY) / 100;
+            decSlope = flagEncoder.getDouble(edgeState.getFlags(), DynamicWeighting.DEC_SLOPE_KEY) / 100;
         }
 
-        return (double) priority / PriorityCode.BEST.getValue();
+        incDist2DSum = edgeState.getDistance() * incDistPercentage;
+        decDist2DSum = edgeState.getDistance() - incDist2DSum;
+
+        priority += preferenceProvider.calcWayTypePreference(wayType);
+        priority += preferenceProvider.calcSurfacePreference(pavedSurface);
+        priority += preferenceProvider.calcSlopePreference(wayType, incSlope, incDist2DSum, decSlope, decDist2DSum);
+
+        //System.out.println("ID: " + edgeState.getEdge() + ", REVERSE: " + reverse +", WAYTYPE: " + wayType + ", INC SLOPE: " + incSlope + ", DEC SLOPE: " + decSlope +", PRIORITY: " + Helper.keepIn(priority, PriorityCode.WORST.getValue(), PriorityCode.BEST.getValue()));
+
+        return Helper.keepIn(priority, PriorityCode.WORST.getValue(), PriorityCode.BEST.getValue()) / PriorityCode.BEST.getValue();
 
     }
 

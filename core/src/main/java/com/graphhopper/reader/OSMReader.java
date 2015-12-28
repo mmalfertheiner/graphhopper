@@ -118,6 +118,7 @@ public class OSMReader implements DataReader
     // negative but increasing to avoid clash with custom created OSM files
     private long newUniqueOsmId = -Long.MAX_VALUE;
     private ElevationProvider eleProvider = ElevationProvider.NOOP;
+    private String smoothingFilter = "";
     private final boolean exitOnlyPillarNodeException = true;
     private File osmFile;
     private final Map<FlagEncoder, EdgeExplorer> outExplorerMap = new HashMap<FlagEncoder, EdgeExplorer>();
@@ -370,19 +371,18 @@ public class OSMReader implements DataReader
                 way.setTag("estimated_center", new GHPoint((firstLat + lastLat) / 2, (firstLon + lastLon) / 2));
             }
 
-            //Kalman filter improves quality of elevation data - check for Kalman
-            boolean kalman = true;
-            if(kalman) {
+            //Smoothing filter for elevation on ways
+            if(smoothingFilter.equalsIgnoreCase("kalman") || smoothingFilter.equalsIgnoreCase("mean")) {
 
                 double[] tmpElevations = new double[osmNodeIds.size()];
                 double[] tmpDistances = new double[osmNodeIds.size()-1];
 
                 int osmNodeId = getNodeMap().get(osmNodeIds.get(0));
-                tmpElevations[0] = getTmpElevation(osmNodeId);
+                tmpElevations[0] = getElevation(osmNodeId);
 
                 for (int i = 1; i < tmpElevations.length; i++) {
                     osmNodeId = getNodeMap().get(osmNodeIds.get(i));
-                    tmpElevations[i] = getTmpElevation(osmNodeId);
+                    tmpElevations[i] = getElevation(osmNodeId);
 
                     int firstNode = getNodeMap().get(osmNodeIds.get(i-1));
                     int lastNode = getNodeMap().get(osmNodeIds.get(i));
@@ -396,12 +396,18 @@ public class OSMReader implements DataReader
                     }
                 }
 
-                SmoothingFilter filter = new SimpleKalmanFilter(SimpleKalmanFilter.COMBINED, 6, tmpDistances, 40);
+                SmoothingFilter filter;
+
+                if(smoothingFilter.equalsIgnoreCase("mean"))
+                    filter = new MeanFilter(tmpDistances, 100);
+                else
+                    filter = new SimpleKalmanFilter(SimpleKalmanFilter.COMBINED, 6, tmpDistances, 60);
+
                 double[] estimatedElevations = filter.smooth(tmpElevations);
 
                 for (int i = 0; i < estimatedElevations.length; i++) {
                     osmNodeId = getNodeMap().get(osmNodeIds.get(i));
-                    updateTmpElevation(osmNodeId, estimatedElevations[i]);
+                    updateTmpElevation(osmNodeId, estimatedElevations[i], (i == 0 || i == estimatedElevations.length - 1));
                 }
             }
         }
@@ -614,11 +620,13 @@ public class OSMReader implements DataReader
 
     //TODO update elevation
 
-    boolean updateTmpElevation( int id, double ele ){
+    boolean updateTmpElevation( int id, double ele, boolean average ){
         if (id == EMPTY)
             return false;
         if(id < TOWER_NODE){
-            ele = (getElevation(id) + ele) / 2;
+            if(average)
+                ele = (getTmpElevation(id) + ele) / 2;
+
             id = -id -3;
             nodeAccess.setElevation(id, ele);
             return true;
@@ -1098,6 +1106,12 @@ public class OSMReader implements DataReader
             throw new IllegalStateException("Make sure you graph accepts 3D data");
 
         this.eleProvider = eleProvider;
+        return this;
+    }
+
+    public OSMReader setElevationFilter( String filter )
+    {
+        this.smoothingFilter = filter;
         return this;
     }
 

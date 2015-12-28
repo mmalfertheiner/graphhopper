@@ -28,6 +28,8 @@ import com.graphhopper.storage.index.LocationIndex;
 import com.graphhopper.storage.index.LocationIndexTree;
 import com.graphhopper.storage.index.QueryResult;
 import com.graphhopper.util.*;
+import com.graphhopper.util.profiles.ProfileManager;
+import com.graphhopper.util.profiles.ProfileRepository;
 import com.graphhopper.util.shapes.GHPoint;
 
 import org.slf4j.Logger;
@@ -92,6 +94,7 @@ public class GraphHopper implements GraphHopperAPI
     // for OSM import
     private String osmFile;
     private double osmReaderWayPointMaxDistance = 1;
+    private String smoothingFilter = "";
     private int workerThreads = -1;
     private boolean calcPoints = true;
     // utils
@@ -633,6 +636,7 @@ public class GraphHopper implements GraphHopperAPI
 
         // osm import
         osmReaderWayPointMaxDistance = args.getDouble("osmreader.wayPointMaxDistance", osmReaderWayPointMaxDistance);
+        smoothingFilter = args.get("osmreader.smoothingFilter", smoothingFilter);
 
         workerThreads = args.getInt("osmreader.workerThreads", workerThreads);
         enableInstructions = args.getBool("osmreader.instructions", enableInstructions);
@@ -742,7 +746,8 @@ public class GraphHopper implements GraphHopperAPI
                 setElevationProvider(eleProvider).
                 setWorkerThreads(workerThreads).
                 setEncodingManager(encodingManager).
-                setWayPointMaxDistance(osmReaderWayPointMaxDistance);
+                setWayPointMaxDistance(osmReaderWayPointMaxDistance).
+                setElevationFilter(smoothingFilter);
     }
 
     /**
@@ -929,6 +934,11 @@ public class GraphHopper implements GraphHopperAPI
      */
     public Weighting createWeighting( WeightingMap weightingMap, FlagEncoder encoder )
     {
+        return createWeighting(weightingMap, encoder, null);
+    }
+
+    public Weighting createWeighting( WeightingMap weightingMap, FlagEncoder encoder, ProfileManager profileManager )
+    {
         String weighting = weightingMap.getWeighting().toLowerCase();
 
         if ("shortest".equalsIgnoreCase(weighting))
@@ -942,7 +952,7 @@ public class GraphHopper implements GraphHopperAPI
                 return new FastestWeighting(encoder, weightingMap);
         } else if ("dynamic".equalsIgnoreCase(weighting))
         {
-            return new DynamicWeighting(encoder, weightingMap);
+            return new DynamicWeighting(encoder, weightingMap, profileManager);
         }
 
         throw new UnsupportedOperationException("weighting " + weighting + " not supported");
@@ -977,7 +987,13 @@ public class GraphHopper implements GraphHopperAPI
     public GHResponse route( GHRequest request )
     {
         GHResponse response = new GHResponse();
-        List<Path> paths = getPaths(request, response);
+        ProfileManager profileManager = null;
+
+        if(request.getVehicle().equals("genbike")) {
+            profileManager = initProfile(request.getHints().get("profile", ""), encodingManager.getEncoder(request.getVehicle()));
+        }
+
+        List<Path> paths = getPaths(request, response, profileManager);
         if (response.hasErrors())
             return response;
 
@@ -996,7 +1012,11 @@ public class GraphHopper implements GraphHopperAPI
         return response;
     }
 
-    protected List<Path> getPaths( GHRequest request, GHResponse rsp )
+    protected List<Path> getPaths( GHRequest request, GHResponse rsp) {
+        return getPaths(request, rsp, null);
+    }
+
+    protected List<Path> getPaths( GHRequest request, GHResponse rsp, ProfileManager profileManager)
     {
         if (ghStorage == null || !fullyLoaded)
             throw new IllegalStateException("Call load or importOrLoad before routing");
@@ -1065,7 +1085,7 @@ public class GraphHopper implements GraphHopperAPI
             weighting = getWeightingForCH(request.getHints(), encoder);
             routingGraph = ghStorage.getGraph(CHGraph.class, weighting);
         } else
-            weighting = createWeighting(request.getHints(), encoder);
+            weighting = createWeighting(request.getHints(), encoder, profileManager);
 
         RoutingAlgorithmFactory tmpAlgoFactory = getAlgorithmFactory(weighting);
         QueryGraph queryGraph = new QueryGraph(routingGraph);
@@ -1108,9 +1128,8 @@ public class GraphHopper implements GraphHopperAPI
 
             sw = new StopWatch().start();
             Path path = algo.calcPath(fromQResult.getClosestNode(), toQResult.getClosestNode());
-
-            //Update time to profile of user
-            path.updateTime(request.getHints());
+            path.initSpeedProvider(profileManager);
+            path.updateTime();
 
             if (path.getTime() < 0)
                 throw new RuntimeException("Time was negative. Please report as bug and include:" + request);
@@ -1282,6 +1301,17 @@ public class GraphHopper implements GraphHopperAPI
     private String formatDateTime( Date date )
     {
         return new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ").format(date);
+    }
+
+    private ProfileManager initProfile(String profile, FlagEncoder encoder) {
+
+        ProfileManager profileManager = new ProfileManager(new ProfileRepository());
+
+        if(!profile.equals("")) {
+            profileManager.init(profile, (BikeGenericFlagEncoder) encoder);
+        }
+
+        return profileManager;
     }
 
     protected void ensureNotLoaded()

@@ -83,7 +83,7 @@ public class InfoServlet extends GHBaseServlet
 
         String w = "fastest";
 
-        if(v.equalsIgnoreCase("generic_bike"))
+        if(v.equalsIgnoreCase("genbike"))
             w = "dynamic";
 
         return w;

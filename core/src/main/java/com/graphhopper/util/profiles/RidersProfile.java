@@ -1,12 +1,8 @@
 package com.graphhopper.util.profiles;
 
-import org.apache.commons.math3.fitting.WeightedObservedPoint;
 
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 public class RidersProfile implements Serializable{
 
@@ -14,8 +10,6 @@ public class RidersProfile implements Serializable{
     public transient final static int SLOPES = 60;
 
     private RidersEntry[][] speedMatrix = new RidersEntry[WAY_TYPES][SLOPES+1]; // 16 Way types, Steigung von -30 % bis + 30 %
-    private double totalDistance;
-
 
     public RidersProfile(){};
 
@@ -27,50 +21,9 @@ public class RidersProfile implements Serializable{
         return speedMatrix[wayType];
     }
 
-    public Map<Integer, double[]> getFilterSpeeds(){
+    public double maxSpeed(int wayType, double wayTypeSpeed){
 
-        Map<Integer, double[]> speedMap = new HashMap<Integer, double[]>();
-
-        for( int i = 0; i < WAY_TYPES; i++ ){
-
-            if(getDistance(i) > 10000) {
-                speedMap.put(i, filterSpeeds(getEntries(i), i));
-            }
-
-        }
-
-        return speedMap;
-    }
-
-    private double[] filterSpeeds(RidersEntry[] ridersEntries, int wayType) {
-
-        ArrayList<WeightedObservedPoint> points = new ArrayList<WeightedObservedPoint>();
-
-        double maxSpeed = maxSpeed(wayType);
-
-        for ( int i = 0; i < ridersEntries.length; i++){
-            if(ridersEntries[i] != null) {
-                points.add(new WeightedObservedPoint(ridersEntries[i].getDistance(), i - SLOPES / 2, ridersEntries[i].getSpeed() / maxSpeed));
-            }
-        }
-
-        final double[] coef = new SigmoidalFitter(new double[]{1, 0.5, -1}).fit(points);
-        SigmoidFunction sigF = new SigmoidFunction();
-
-        double[] result = new double[SLOPES + 1];
-
-        int offset = SLOPES / 2;
-
-        for( int i = - offset; i < offset + 1; i++){
-            result[i + offset] = sigF.value(i, coef) * maxSpeed;
-        }
-
-        return result;
-    }
-
-    public double maxSpeed(int wayType){
-
-        double max = 0.0;
+        double max = wayTypeSpeed * 2;
 
         for (RidersEntry r : speedMatrix[wayType]){
             if(r != null && r.getSpeed() > max)
@@ -101,36 +54,6 @@ public class RidersProfile implements Serializable{
         return getEntry(wayType, slope).getDistance();
     }
 
-    public double getDistance(int wayType){
-        double totalDist = 0;
-
-        for(int i = 0; i < speedMatrix[wayType].length; i++) {
-            if(speedMatrix[wayType][i] != null)
-                totalDist += speedMatrix[wayType][i].getDistance();
-        }
-
-        return totalDist;
-    }
-
-    public double getTotalDistance(){
-        return totalDistance;
-    }
-
-    public double[] getWayTypePriority(){
-
-        double[] distancesPerWayType = new double[WAY_TYPES];
-
-        for (int i = 0; i < speedMatrix.length; i++) {
-            for (int j = 0; j < speedMatrix[i].length; j++) {
-                distancesPerWayType[i] += getDistance(i, j - (SLOPES / 2));
-            }
-
-            distancesPerWayType[i] = distancesPerWayType[i] / totalDistance * 100;
-        }
-
-        return distancesPerWayType;
-
-    }
 
     public void update(TrackPart trackPart) {
 
@@ -157,7 +80,6 @@ public class RidersProfile implements Serializable{
         }
 
         ridersEntry.updateEntry(trackPart.getSpeed(), trackPart.getDistance());
-        totalDistance += trackPart.getDistance();
 
     }
 

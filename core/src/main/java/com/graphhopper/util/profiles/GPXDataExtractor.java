@@ -27,8 +27,8 @@ public class GPXDataExtractor {
     private List<TrackPart> trackParts;
     private MapMatching mapMatching;
     private BikeGenericFlagEncoder encoder;
-    private int filterType = FILTER_KALMAN_FORWARD;
-    private int filterDistance = 100;
+    private int filterType = FILTER_KALMAN_COMBINED;
+    private int filterDistance = 60;
 
     private double[] distances;
     private double[] elevations;
@@ -67,7 +67,7 @@ public class GPXDataExtractor {
         // create MapMatching object, can and should be shared accross threads
         GraphHopperStorage graph = hopper.getGraphHopperStorage();
         LocationIndexMatch locationIndex = new LocationIndexMatch(graph, (LocationIndexTree) hopper.getLocationIndex());
-        encoder = (BikeGenericFlagEncoder) hopper.getEncodingManager().getEncoder("generic_bike");
+        encoder = (BikeGenericFlagEncoder) hopper.getEncodingManager().getEncoder("genbike");
 
         mapMatching = new MapMatching(graph, locationIndex, encoder);
         mapMatching.setForceRepair(true);
@@ -134,7 +134,6 @@ public class GPXDataExtractor {
             double secondLon = inputGPXEntries.get(i).getLon();
 
             distances[i-1] = distCalc.calcDist(firstLat, firstLon, secondLat, secondLon);
-            System.out.print(", " + distances[i-1]);
             elevations[i] = inputGPXEntries.get(i).getEle();
 
         }

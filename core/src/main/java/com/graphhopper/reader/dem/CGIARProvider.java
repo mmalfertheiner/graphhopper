@@ -255,6 +255,7 @@ public class CGIARProvider implements ElevationProvider
                     }
                     heights.flush();
 
+                    //demProvider.toImage("x" + name + ".png");
                     // TODO remove tifName and zip?
                 } catch (Exception ex)
                 {
@@ -355,5 +356,7 @@ public class CGIARProvider implements ElevationProvider
         System.out.println(provider.getEle(29.840644, -42.890625));
 
         System.out.println(provider.getEle(50.477121, 8.051915));
+
+        System.out.println(provider.getEle(45.975, 10.861359));
     }
 }

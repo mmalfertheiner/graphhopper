@@ -2,10 +2,9 @@ package com.graphhopper.util.profiles.operations;
 
 
 import com.graphhopper.GraphHopper;
-import com.graphhopper.matching.LocationIndexMatch;
 import com.graphhopper.util.CmdArgs;
 import com.graphhopper.util.profiles.GPXDataExtractor;
-import com.graphhopper.util.profiles.ProfileManager;
+import com.graphhopper.util.profiles.ProfileRepository;
 import com.graphhopper.util.profiles.RidersProfile;
 import com.graphhopper.matching.GPXFile;
 
@@ -30,9 +29,9 @@ public class AddToProfileOperation implements Operation {
     @Override
     public void run() {
 
-        ProfileManager profileManager = new ProfileManager();
+        ProfileRepository profileRepository = new ProfileRepository();
 
-        RidersProfile ridersProfile = profileManager.getProfile(name);
+        RidersProfile ridersProfile = profileRepository.getProfile(name);
 
         if(ridersProfile == null) {
             System.err.println("Could not load profile " + name + ". Please check your profile name.");
@@ -47,7 +46,7 @@ public class AddToProfileOperation implements Operation {
         gpxDataExtractor.setFile(gpxFile);
         ridersProfile.update(gpxDataExtractor.extract());
 
-        profileManager.saveProfile(name);
+        profileRepository.saveProfile(name);
 
     }
 }
