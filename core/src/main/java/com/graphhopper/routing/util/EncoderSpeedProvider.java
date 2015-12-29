@@ -38,7 +38,6 @@ public class EncoderSpeedProvider implements SpeedProvider {
             incDistPercentage = 1.0 - incDistPercentage;
         }
 
-        //System.out.println("ID: " + edgeState.getEdge() + ", REVERSE: " + reverse + ", INC SLOPE: " + incElevation + ", DEC SLOPE: " + decElevation);
 
         // use weighted mean so that longer incline infuences speed more than shorter
         double fwdFaster = 1 + 30 * keepIn(decElevation, 0, 0.2);
@@ -48,8 +47,6 @@ public class EncoderSpeedProvider implements SpeedProvider {
         double incDist2DSum = edgeState.getDistance() * incDistPercentage;
         double decDist2DSum = edgeState.getDistance() - incDist2DSum;
         adjustedSpeed = keepIn(speed * (fwdSlower * incDist2DSum + fwdFaster * decDist2DSum) / edgeState.getDistance(), BikeGenericFlagEncoder.PUSHING_SECTION_SPEED / 2, 50);
-
-        //System.out.println("NEW SPEED: " + Helper.round2(adjustedSpeed) + ", SPEED: " + speed + ", INC ELE: " + incElevation + ", DEC ELE: " + decElevation + ", PERCENTAGE: " + incDistPercentage + " CORRECT:");
 
         return adjustedSpeed;
     }

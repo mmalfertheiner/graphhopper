@@ -89,8 +89,6 @@ public class DynamicWeighting implements Weighting
         if (penalizeEdge)
             time += heading_penalty;
 
-        System.out.println("ID: " + edgeState.getEdge() + ", REVERSE: " + reverse + ", TIME: " + time);
-
         return time / Math.pow((0.5 + getEdgePreference(edgeState, reverse)), 2);
     }
 
@@ -121,9 +119,7 @@ public class DynamicWeighting implements Weighting
         priority += preferenceProvider.calcWayTypePreference(wayType);
         priority += preferenceProvider.calcSurfacePreference(pavedSurface);
         priority += preferenceProvider.calcSlopePreference(wayType, incSlope, incDist2DSum, decSlope, decDist2DSum);
-
-        //System.out.println("ID: " + edgeState.getEdge() + ", REVERSE: " + reverse +", WAYTYPE: " + wayType + ", INC SLOPE: " + incSlope + ", DEC SLOPE: " + decSlope +", PRIORITY: " + Helper.keepIn(priority, PriorityCode.WORST.getValue(), PriorityCode.BEST.getValue()));
-
+        
         return Helper.keepIn(priority, PriorityCode.WORST.getValue(), PriorityCode.BEST.getValue()) / PriorityCode.BEST.getValue();
 
     }

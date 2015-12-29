@@ -2,7 +2,6 @@ package com.graphhopper.util.profiles;
 
 
 import com.graphhopper.routing.util.BikeGenericFlagEncoder;
-import com.graphhopper.util.EdgeIteratorState;
 import org.apache.commons.math3.fitting.WeightedObservedPoint;
 
 import java.util.ArrayList;
